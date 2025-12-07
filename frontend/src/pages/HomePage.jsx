@@ -1,4 +1,5 @@
 import {SnowForeground, SnowBackground} from "../components/Snow.jsx";
+import UserList from "../components/UserList.jsx";
 
 export default function HomePage() {
   return (
