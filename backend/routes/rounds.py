@@ -7,7 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from ..main import get_db
 from .auth import get_current_user
-from ..models import Round, RoundCreate, PlayerAssignment, GoodDeedCreate, GoodDeedPublic, UserPublic, RoundMember
+from ..models import Round, RoundCreate, PlayerAssignment, GoodDeedCreate, GoodDeedPublic, UserPublic, RoundMember, MissionPublic, AssignedDeedPublic
 
 router = APIRouter(prefix="/rounds", tags=["rounds"])
 
@@ -26,6 +26,10 @@ async def get_deeds_collection(db: AsyncIOMotorDatabase):
 
 async def get_members_collection(db: AsyncIOMotorDatabase):
     return db["round_members"]
+
+
+async def get_deed_templates_collection(db: AsyncIOMotorDatabase):
+    return db["deed_templates"]
 
 
 def _gen_code() -> str:
@@ -159,14 +163,34 @@ async def start_round(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db),
         # Fallback: simple rotation guarantees no self assignment
         targets = ids[1:] + ids[:1]
 
-    # Persist assignments
+    # Persist assignments with random deed templates
+    templates_col = await get_deed_templates_collection(db)
+    templates = []
+    async for t in templates_col.find({"active": True}):
+        t["_id"] = str(t["_id"]) if "_id" in t else None
+        templates.append(t)
+    # Provide a small default set if none exist
+    if not templates:
+        defaults = [
+            {"title": "Write a heartfelt note", "description": "Leave an encouraging note for your target."},
+            {"title": "Bring a treat", "description": "Surprise your target with their favorite snack."},
+            {"title": "Offer help", "description": "Help your target with a task or chore."},
+        ]
+        for d in defaults:
+            res_ins = await templates_col.insert_one({"title": d["title"], "description": d.get("description"), "active": True, "created_at": datetime.utcnow()})
+            templates.append({"_id": str(res_ins.inserted_id), **d})
     await assignments_col.delete_many({"round_id": round_id})
     created = []
     for player_id, target_id in zip(ids, targets):
+        deed = random.choice(templates) if templates else {"_id": None, "title": "Do something kind", "description": None}
         doc = {
             "round_id": round_id,
             "player_user_id": player_id,
             "target_user_id": target_id,
+            "assigned_deed_template_id": deed.get("_id"),
+            "assigned_deed_title": deed.get("title"),
+            "assigned_deed_description": deed.get("description"),
+            "status": "assigned",
             "created_at": datetime.utcnow(),
         }
         res = await assignments_col.insert_one(doc)
@@ -216,6 +240,74 @@ async def close_round(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db),
     rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
     rnd["_id"] = str(rnd["_id"]) if "_id" in rnd else None
     return Round(**rnd)
+
+
+@router.get("/{round_id}/my-mission", response_model=MissionPublic)
+async def my_mission(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db), me: UserPublic = Depends(get_current_user)):
+    assignments_col = await get_assignments_collection(db)
+    templates_col = await get_deed_templates_collection(db)
+    users_col = db["users"]
+    assignment = await assignments_col.find_one({"round_id": round_id, "player_user_id": me._id or me.id})
+    if not assignment:
+        raise HTTPException(status_code=404, detail="No assignment found; has the round started?")
+    # If no assigned deed yet, pick one now
+    if not assignment.get("assigned_deed_title"):
+        templates = []
+        async for t in templates_col.find({"active": True}):
+            t["_id"] = str(t["_id"]) if "_id" in t else None
+            templates.append(t)
+        if not templates:
+            templates = [{"_id": None, "title": "Do something kind", "description": None}]
+        deed = random.choice(templates)
+        await assignments_col.update_one(
+            {"_id": __import__("bson").ObjectId(assignment["_id"])},
+            {"$set": {
+                "assigned_deed_template_id": deed.get("_id"),
+                "assigned_deed_title": deed.get("title"),
+                "assigned_deed_description": deed.get("description"),
+                "status": "assigned"
+            }}
+        )
+        assignment = await assignments_col.find_one({"_id": __import__("bson").ObjectId(assignment["_id"])})
+    target = await users_col.find_one({"_id": __import__("bson").ObjectId(assignment["target_user_id"])})
+    if not target:
+        raise HTTPException(status_code=404, detail="Assigned target user not found")
+    target["_id"] = str(target["_id"]) if "_id" in target else None
+    return MissionPublic(
+        round_id=round_id,
+        target=UserPublic(**target),
+        deed=AssignedDeedPublic(title=assignment.get("assigned_deed_title"), description=assignment.get("assigned_deed_description")),
+        status=assignment.get("status", "pending"),
+        completed_at=assignment.get("completed_at")
+    )
+
+
+@router.post("/{round_id}/complete-mission", response_model=GoodDeedPublic)
+async def complete_mission(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db), me: UserPublic = Depends(get_current_user)):
+    assignments_col = await get_assignments_collection(db)
+    deeds_col = await get_deeds_collection(db)
+    assignment = await assignments_col.find_one({"round_id": round_id, "player_user_id": me._id or me.id})
+    if not assignment:
+        raise HTTPException(status_code=404, detail="No assignment found")
+    if assignment.get("status") == "completed":
+        raise HTTPException(status_code=400, detail="Mission already completed")
+    # Record deed
+    deed_doc = {
+        "user_id": me._id or me.id,
+        "round_id": round_id,
+        "target_user_id": assignment.get("target_user_id"),
+        "title": assignment.get("assigned_deed_title") or "Good deed",
+        "description": assignment.get("assigned_deed_description"),
+        "created_at": datetime.utcnow(),
+    }
+    res = await deeds_col.insert_one(deed_doc)
+    deed_doc["_id"] = str(res.inserted_id)
+    # Mark assignment completed
+    await assignments_col.update_one(
+        {"_id": __import__("bson").ObjectId(assignment["_id"])},
+        {"$set": {"status": "completed", "completed_at": datetime.utcnow()}},
+    )
+    return GoodDeedPublic(**deed_doc)
 
 
 @router.get("/{round_id}/my-target", response_model=UserPublic)

@@ -7,7 +7,7 @@ FastAPI + MongoDB backend for creating and running Secret Santa rounds where pla
 - Tech: FastAPI, Motor (MongoDB), Pydantic v2, JWT (python-jose), Passlib (bcrypt_sha256)
 - Data: Mongo Atlas or local MongoDB
 - Auth: Email + password, JWT bearer tokens
-- Core: Rounds with access codes, membership, target assignments, and good deeds
+- Core: Rounds with access codes, membership, target assignments, deed templates, missions, and good deeds
 
 ## Environment
 
@@ -43,9 +43,13 @@ Server runs at `http://127.0.0.1:8000`.
 - RoundMember
   - `_id`, `round_id`, `user_id`, `joined_at`
 - PlayerAssignment
-  - `_id`, `round_id`, `player_user_id`, `target_user_id`, `created_at`
+  - `_id`, `round_id`, `player_user_id`, `target_user_id`,
+  - `assigned_deed_template_id?`, `assigned_deed_title?`, `assigned_deed_description?`,
+  - `status` (pending|assigned|completed), `created_at`, `completed_at?`
 - GoodDeed
   - `_id`, `user_id`, `round_id`, `target_user_id`, `title`, `description`, `created_at`
+- DeedTemplate
+  - `_id`, `title`, `description?`, `active`, `created_at`
 
 ## API Reference
 
@@ -94,6 +98,11 @@ Authorization: Use header `Authorization: Bearer <token>` for protected routes b
   - Returns: updated `Round`
 - GET `/rounds/{round_id}/my-target`
   - Returns: `UserPublic` of your assigned target
+- GET `/rounds/{round_id}/my-mission`
+  - Returns: `{ round_id, target: UserPublic, deed: { title, description? }, status, completed_at? }`
+- POST `/rounds/{round_id}/complete-mission`
+  - Mark your current mission completed and record a deed
+  - Returns: `GoodDeedPublic`
 - POST `/rounds/{round_id}/deeds`
   - Submit a good deed about your target
   - Body: `{ title, description? }`
@@ -112,6 +121,16 @@ Authorization: Use header `Authorization: Bearer <token>` for protected routes b
   - Join a round using the invite `token`
   - Returns: `{ joined: true, round_id }`
 
+### Deed Templates (`/deed-templates`)
+
+- GET `/deed-templates/`
+  - List active deed templates
+  - Returns: `DeedTemplate[]`
+- POST `/deed-templates/`
+  - Create a deed template (auth required)
+  - Body: `{ title, description?, active? }`
+  - Returns: `DeedTemplate`
+
 ### Health
 
 - GET `/health` → `{ status: "ok" }`
@@ -124,6 +143,7 @@ Authorization: Use header `Authorization: Bearer <token>` for protected routes b
 - `round_members`
 - `assignments`
 - `deeds`
+- `deed_templates`
 
 ## Security
 
@@ -135,6 +155,7 @@ Authorization: Use header `Authorization: Bearer <token>` for protected routes b
 - `.env` is loaded relative to `backend/main.py`
 - `_id` fields are returned as strings in API responses for simplicity
 - Round start uses random derangement; falls back to rotation if needed
+- When starting a round, each assignment is given a random deed template. If none exist, a small default set is auto-seeded.
 
 ## Troubleshooting
 
