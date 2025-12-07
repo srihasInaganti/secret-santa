@@ -242,6 +242,46 @@ async def close_round(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db),
     return Round(**rnd)
 
 
+@router.get("/{round_id}/summary")
+async def round_summary(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db), me: UserPublic = Depends(get_current_user)):
+    """Owner-only summary of a round: players, their targets, assigned deeds, and status."""
+    rounds_col = await get_rounds_collection(db)
+    assignments_col = await get_assignments_collection(db)
+    users_col = db["users"]
+
+    rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
+    if not rnd:
+        raise HTTPException(status_code=404, detail="Round not found")
+    _owner_guard(rnd, me)
+
+    cursor = assignments_col.find({"round_id": round_id})
+    items = []
+    async for a in cursor:
+        # load player and target
+        player = await users_col.find_one({"_id": __import__("bson").ObjectId(a["player_user_id"])}, projection={"hashed_password": 0})
+        target = await users_col.find_one({"_id": __import__("bson").ObjectId(a["target_user_id"])}, projection={"hashed_password": 0})
+        if not player or not target:
+            continue
+        player["_id"] = str(player["_id"]) if "_id" in player else None
+        target["_id"] = str(target["_id"]) if "_id" in target else None
+        items.append({
+            "player": UserPublic(**player),
+            "target": UserPublic(**target),
+            "deed": {
+                "title": a.get("assigned_deed_title"),
+                "description": a.get("assigned_deed_description"),
+            },
+            "status": a.get("status", "pending"),
+            "completed_at": a.get("completed_at"),
+        })
+
+    return {
+        "round_id": round_id,
+        "status": rnd.get("status"),
+        "assignments": items,
+    }
+
+
 @router.get("/{round_id}/my-mission", response_model=MissionPublic)
 async def my_mission(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db), me: UserPublic = Depends(get_current_user)):
     assignments_col = await get_assignments_collection(db)
