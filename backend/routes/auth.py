@@ -16,7 +16,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 pwd_context = CryptContext(schemes=["bcrypt_sha256"], deprecated="auto")
 
 # In a real app, use a strong random secret and store in env. For demo purposes:
-JWT_SECRET = "CHANGE_ME_SUPER_SECRET"
+import os
+JWT_SECRET = os.getenv("JWT_SECRET", "CHANGE_ME_SUPER_SECRET")
 JWT_ALG = "HS256"
 JWT_EXP_MIN = 60 * 24
 
