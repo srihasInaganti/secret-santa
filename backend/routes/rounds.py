@@ -81,6 +81,11 @@ async def add_players(round_id: str, emails: List[str], db: AsyncIOMotorDatabase
     return found
 
 
+def _owner_guard(rnd: dict, me: UserPublic):
+    if str(rnd.get("owner_user_id")) != (me._id or me.id):
+        raise HTTPException(status_code=403, detail="Owner permission required")
+
+
 @router.post("/{round_id}/join", response_model=RoundMember)
 async def join_round(round_id: str, access_code: str, db: AsyncIOMotorDatabase = Depends(get_db), me: UserPublic = Depends(get_current_user)):
     rounds_col = await get_rounds_collection(db)
@@ -128,8 +133,7 @@ async def start_round(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db),
     rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
     if not rnd:
         raise HTTPException(status_code=404, detail="Round not found")
-    if str(rnd.get("owner_user_id")) != (me._id or me.id):
-        raise HTTPException(status_code=403, detail="Only owner can start the round")
+    _owner_guard(rnd, me)
     if rnd.get("status") != "pending":
         raise HTTPException(status_code=400, detail="Round already started or closed")
 
@@ -171,6 +175,47 @@ async def start_round(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db),
     # Mark round started
     await rounds_col.update_one({"_id": __import__("bson").ObjectId(round_id)}, {"$set": {"status": "started"}})
     return created
+
+
+@router.get("/{round_id}", response_model=Round)
+async def get_round(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db), me: UserPublic = Depends(get_current_user)):
+    rounds_col = await get_rounds_collection(db)
+    rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
+    if not rnd:
+        raise HTTPException(status_code=404, detail="Round not found")
+    rnd["_id"] = str(rnd["_id"]) if "_id" in rnd else None
+    return Round(**rnd)
+
+
+@router.post("/{round_id}/regenerate-code", response_model=Round)
+async def regenerate_code(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db), me: UserPublic = Depends(get_current_user)):
+    rounds_col = await get_rounds_collection(db)
+    rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
+    if not rnd:
+        raise HTTPException(status_code=404, detail="Round not found")
+    _owner_guard(rnd, me)
+    if rnd.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Can only regenerate while pending")
+    code = _gen_code()
+    await rounds_col.update_one({"_id": __import__("bson").ObjectId(round_id)}, {"$set": {"access_code": code}})
+    rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
+    rnd["_id"] = str(rnd["_id"]) if "_id" in rnd else None
+    return Round(**rnd)
+
+
+@router.post("/{round_id}/close", response_model=Round)
+async def close_round(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db), me: UserPublic = Depends(get_current_user)):
+    rounds_col = await get_rounds_collection(db)
+    rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
+    if not rnd:
+        raise HTTPException(status_code=404, detail="Round not found")
+    _owner_guard(rnd, me)
+    if rnd.get("status") != "started":
+        raise HTTPException(status_code=400, detail="Round must be started to close")
+    await rounds_col.update_one({"_id": __import__("bson").ObjectId(round_id)}, {"$set": {"status": "closed"}})
+    rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
+    rnd["_id"] = str(rnd["_id"]) if "_id" in rnd else None
+    return Round(**rnd)
 
 
 @router.get("/{round_id}/my-target", response_model=UserPublic)
