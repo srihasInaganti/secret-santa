@@ -69,6 +69,13 @@ Authorization: Use header `Authorization: Bearer <token>` for protected routes b
   - Create a round (owner = current user)
   - Body: `{ name }`
   - Returns: `Round` (includes `access_code`, `status`)
+- GET `/rounds/{round_id}`
+  - Get round details
+  - Returns: `Round`
+- POST `/rounds/{round_id}/regenerate-code`
+  - Owner-only, pending rounds only
+  - Generates a new `access_code`
+  - Returns: updated `Round`
 - POST `/rounds/{round_id}/join`
   - Join by `access_code`
   - Query: `access_code`
@@ -82,6 +89,9 @@ Authorization: Use header `Authorization: Bearer <token>` for protected routes b
 - POST `/rounds/{round_id}/start`
   - Owner-only. Assign targets among members, mark round started
   - Returns: `PlayerAssignment[]`
+- POST `/rounds/{round_id}/close`
+  - Owner-only. Mark round closed; deed submissions should be considered locked
+  - Returns: updated `Round`
 - GET `/rounds/{round_id}/my-target`
   - Returns: `UserPublic` of your assigned target
 - POST `/rounds/{round_id}/deeds`
@@ -91,6 +101,16 @@ Authorization: Use header `Authorization: Bearer <token>` for protected routes b
 - GET `/rounds/{round_id}/deeds`
   - List deeds for the round
   - Returns: `GoodDeedPublic[]`
+
+### Invites (`/rounds`)
+
+- POST `/rounds/{round_id}/invites`
+  - Owner-only. Create a one-time invite token with expiration
+  - Query: `expires_minutes` (default 1440)
+  - Returns: `{ token, expires_at }`
+- POST `/rounds/join-by-invite`
+  - Join a round using the invite `token`
+  - Returns: `{ joined: true, round_id }`
 
 ### Health
 
@@ -108,7 +128,7 @@ Authorization: Use header `Authorization: Bearer <token>` for protected routes b
 ## Security
 
 - Passwords hashed with Passlib `bcrypt_sha256` (no 72-byte truncation issue)
-- JWT signed with HS256; keep `JWT_SECRET` private
+- JWT signed with HS256; keep `JWT_SECRET` private (set in `.env`)
 
 ## Development Notes
 
