@@ -7,6 +7,6 @@ import YourGoodDeed from './pages/YourGoodDeed.jsx'
 
 createRoot(document.getElementById('root')).render (
    <StrictMode> 
-    <YourGoodDeed /> 
+    <HomePage /> 
     </StrictMode> 
   )
