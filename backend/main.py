@@ -81,6 +81,12 @@ async def db_ping(db: AsyncIOMotorDatabase = Depends(get_db)) -> JSONResponse:
 
 # Routers
 from .routes.auth import router as auth_router
+from .routes.rounds import router as rounds_router
+from .routes.invites import router as invites_router
+from .routes.deeds import router as deeds_router
 
 app.include_router(auth_router)
+app.include_router(rounds_router)
+app.include_router(invites_router)
+app.include_router(deeds_router)
 
