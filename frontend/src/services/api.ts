@@ -1,91 +1,85 @@
-// replace with .env value
-const API_BASE = "http://localhost:8000"
+const API_BASE = 'http://localhost:8000';
 
 // ============ Types ============
 
-export interface UserPublic {
+export interface User {
   _id: string;
   name: string;
-  email: string;
+}
+
+export interface Group {
+  _id: string;
+  name: string;
 }
 
 export interface Round {
   _id: string;
+  group_id: string;
   name: string;
-  owner_user_id: string;
-  access_code: string;
-  status: 'pending' | 'started' | 'closed';
-  created_at: string;
+  status: 'active' | 'completed';
 }
 
-export interface AssignedDeed {
-  title: string;
-  description?: string;
-}
-
-export interface GoodDeedPublic {
+export interface MemberStatus {
   _id: string;
-  user_id: string;
-  round_id: string;
-  target_user_id: string;
-  title: string;
-  description?: string;
-  created_at: string;
-}
-
-export interface DeedTemplate {
-  _id: string;
-  title: string;
-  description?: string;
-  active: boolean;
-}
-
-// For GroupTree component - user + completion status
-export interface MemberWithStatus extends UserPublic {
+  name: string;
   completed: boolean;
-  completedAt?: string;
 }
 
-// ============ Round Endpoints ============
+// ============ Users ============
 
-export async function fetchRound(roundId: string): Promise<Round> {
+export async function login(name: string): Promise<User> {
+  const response = await fetch(`${API_BASE}/users/login/${name}`);
+  if (!response.ok) throw new Error('User not found');
+  return response.json();
+}
+
+export async function createUser(name: string): Promise<User> {
+  const response = await fetch(`${API_BASE}/users/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error('Failed to create user');
+  return response.json();
+}
+
+export async function getUserGroups(userId: string): Promise<Group[]> {
+  const response = await fetch(`${API_BASE}/users/${userId}/groups`);
+  if (!response.ok) throw new Error('Failed to fetch groups');
+  return response.json();
+}
+
+// ============ Groups ============
+
+export async function getGroup(groupId: string): Promise<Group> {
+  const response = await fetch(`${API_BASE}/groups/${groupId}`);
+  if (!response.ok) throw new Error('Failed to fetch group');
+  return response.json();
+}
+
+export async function getCurrentRound(groupId: string): Promise<Round> {
+  const response = await fetch(`${API_BASE}/groups/${groupId}/current-round`);
+  if (!response.ok) throw new Error('No active round');
+  return response.json();
+}
+
+// ============ Rounds ============
+
+export async function getRound(roundId: string): Promise<Round> {
   const response = await fetch(`${API_BASE}/rounds/${roundId}`);
   if (!response.ok) throw new Error('Failed to fetch round');
   return response.json();
 }
 
-export async function fetchRoundMembers(roundId: string): Promise<UserPublic[]> {
-  const response = await fetch(`${API_BASE}/rounds/${roundId}/members`);
-  if (!response.ok) throw new Error('Failed to fetch round members');
+export async function getRoundStatus(roundId: string): Promise<MemberStatus[]> {
+  const response = await fetch(`${API_BASE}/rounds/${roundId}/status`);
+  if (!response.ok) throw new Error('Failed to fetch status');
   return response.json();
 }
 
-export async function fetchRoundDeeds(roundId: string): Promise<GoodDeedPublic[]> {
-  const response = await fetch(`${API_BASE}/rounds/${roundId}/deeds`);
-  if (!response.ok) throw new Error('Failed to fetch round deeds');
-  return response.json();
-}
-
-export async function fetchDeedTemplates(): Promise<DeedTemplate[]> {
-  const response = await fetch(`${API_BASE}/deed-templates/`);
-  if (!response.ok) throw new Error('Failed to fetch deed templates');
-  return response.json();
-}
-
-// ============ Combined Fetcher for GroupTree ============
-
-export async function fetchMembersWithStatus(roundId: string): Promise<MemberWithStatus[]> {
-  const [members, deeds] = await Promise.all([
-    fetchRoundMembers(roundId),
-    fetchRoundDeeds(roundId),
-  ]);
-
-  const deedsByUserId = new Map<string, GoodDeedPublic>();
-  deeds.forEach(deed => deedsByUserId.set(deed.user_id, deed));
-
-  return members.map(member => ({
-    ...member,
-    completed: deedsByUserId.has(member._id),
-    completedAt: deedsByUserId.get(member._id)?.created_at,
-  }));
+export async function completeDeed(roundId: string, userId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/rounds/${roundId}/complete?user_id=${userId}`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to complete deed');
 }

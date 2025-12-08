@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { fetchMembersWithStatus, fetchRound, MemberWithStatus, Round } from '../services/api';
+import React, { useEffect, useState, useMemo } from 'react';
+import { getRound, getRoundStatus, MemberStatus, Round } from '../services/api';
+import NavBar from './NavBar';
 import Ornament from './Ornament';
 import './GroupTree.css';
 
@@ -8,54 +9,77 @@ const ORNAMENT_COLORS = [
   '#F87171', '#FBBF24', '#34D399', '#A78BFA',
 ];
 
-interface GroupTreeProps {
-  roundId: string;
-  onViewDeed?: () => void;
+function generateRandomPosition(index: number, seed: string) {
+  var hash = (seed + index).split('').reduce(function(a, b) {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+
+  var topPercent = 20 + Math.abs(hash % 55);
+  var narrowness = (topPercent - 20) / 55;
+  var minLeft = 35 - (narrowness * 15);
+  var maxLeft = 65 + (narrowness * 15);
+  var leftRange = maxLeft - minLeft;
+  var leftPercent = minLeft + (Math.abs((hash * 7) % 100) / 100 * leftRange);
+
+  return {
+    top: topPercent + '%',
+    left: leftPercent + '%',
+  };
 }
 
-const GroupTree: React.FC<GroupTreeProps> = ({ roundId, onViewDeed }) => {
-  const [members, setMembers] = useState<MemberWithStatus[]>([]);
-  const [round, setRound] = useState<Round | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function GroupTree(props: { roundId: string; groupName?: string; onNavigate?: Function }) {
+  var [members, setMembers] = useState<MemberStatus[]>([]);
+  var [round, setRound] = useState<Round | null>(null);
+  var [loading, setLoading] = useState(true);
+  var [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadData = async () => {
+  useEffect(function() {
+    async function loadData() {
       try {
         setLoading(true);
         setError(null);
-        const [roundData, membersData] = await Promise.all([
-          fetchRound(roundId),
-          fetchMembersWithStatus(roundId),
-        ]);
+        var roundData = await getRound(props.roundId);
+        var statusData = await getRoundStatus(props.roundId);
         setRound(roundData);
-        setMembers(membersData);
+        setMembers(statusData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Failed to load data');
+        }
       } finally {
         setLoading(false);
       }
-    };
+    }
     loadData();
-  }, [roundId]);
+  }, [props.roundId]);
 
-  const getUserColor = (index: number): string => ORNAMENT_COLORS[index % ORNAMENT_COLORS.length];
-  const completedMembers = members.filter(m => m.completed);
+  function getUserColor(index: number) {
+    return ORNAMENT_COLORS[index % ORNAMENT_COLORS.length];
+  }
 
-  const getTreeOrnamentPosition = (index: number): { top: string; left: string } => {
-    const positions = [
-      { top: '18%', left: '48%' }, { top: '32%', left: '30%' }, { top: '32%', left: '66%' },
-      { top: '48%', left: '22%' }, { top: '48%', left: '50%' }, { top: '48%', left: '74%' },
-      { top: '64%', left: '18%' }, { top: '64%', left: '42%' }, { top: '64%', left: '58%' },
-      { top: '64%', left: '78%' }, { top: '78%', left: '28%' }, { top: '78%', left: '50%' },
-      { top: '78%', left: '70%' },
-    ];
-    return positions[index % positions.length];
-  };
+  var completedMembers = members.filter(function(m) {
+    return m.completed;
+  });
+
+  var ornamentPositions = useMemo(function() {
+    return completedMembers.map(function(member, index) {
+      return generateRandomPosition(index, member._id);
+    });
+  }, [completedMembers]);
+
+  function handleTabChange(tab: string) {
+    if (props.onNavigate) {
+      props.onNavigate(tab);
+    }
+  }
 
   if (loading) {
     return (
       <div className="group-tree-container">
+        <NavBar activeTab="group" onTabChange={handleTabChange} />
         <div className="loading-state">
           <div className="snowflake">❄</div>
           <p>Loading your group...</p>
@@ -67,48 +91,49 @@ const GroupTree: React.FC<GroupTreeProps> = ({ roundId, onViewDeed }) => {
   if (error) {
     return (
       <div className="group-tree-container">
+        <NavBar activeTab="group" onTabChange={handleTabChange} />
         <div className="error-state">
           <p>🎄 Oops! {error}</p>
-          <button onClick={() => window.location.reload()}>Try Again</button>
+          <button onClick={function() { window.location.reload(); }}>Try Again</button>
         </div>
       </div>
     );
   }
 
+  var groupName = props.groupName || (round ? round.name : 'Group');
+
   return (
     <div className="group-tree-container">
-      <nav className="tree-nav">
-        <button className="nav-btn active">Your Group</button>
-        <button className="nav-btn" onClick={onViewDeed}>Your Good Deed</button>
-        <button className="nav-btn profile-btn">Profile</button>
-      </nav>
+      <NavBar activeTab="group" onTabChange={handleTabChange} />
 
-      <main className="tree-content">
+      <div className="tree-content">
         <section className="members-panel">
-          <h2 className="group-name">[{round?.name || 'Group'}]</h2>
+          <h2 className="group-name">[{groupName}]</h2>
 
-          {round?.status === 'pending' && <p className="round-status pending">⏳ Waiting to start...</p>}
-          {round?.status === 'started' && (
-            <p className="round-status started">🎁 {completedMembers.length}/{members.length} deeds complete</p>
-          )}
-          {round?.status === 'closed' && <p className="round-status closed">✅ Round complete!</p>}
+          <p className="round-status started">
+            🎁 {completedMembers.length}/{members.length} deeds complete
+          </p>
 
           <ul className="members-list">
-            {members.map((member, index) => (
-              <li key={member._id} className="member-item">
-                <span className="member-name">
-                  {member.name}: {member.completed ? 'Complete' : 'Incomplete'}
-                </span>
-                <Ornament color={getUserColor(index)} size={40} completed={member.completed} />
-              </li>
-            ))}
+            {members.map(function(member, index) {
+              return (
+                <li key={member._id} className="member-item">
+                  <span className="member-name">
+                    {member.name}: {member.completed ? 'Complete' : 'Incomplete'}
+                  </span>
+                  <Ornament color={getUserColor(index)} size={40} completed={member.completed} />
+                </li>
+              );
+            })}
           </ul>
 
           {members.length === 0 && (
-            <p className="no-members">No members yet. Share the access code to invite people!</p>
+            <p className="no-members">No members yet!</p>
           )}
 
-          <button className="deed-btn" onClick={onViewDeed}>See your good deed!</button>
+          <button className="deed-btn" onClick={function() { handleTabChange('deed'); }}>
+            See your good deed!
+          </button>
         </section>
 
         <section className="tree-panel">
@@ -122,15 +147,17 @@ const GroupTree: React.FC<GroupTreeProps> = ({ roundId, onViewDeed }) => {
             </svg>
 
             <div className="tree-ornaments">
-              {completedMembers.map((member, index) => {
-                const originalIndex = members.findIndex(m => m._id === member._id);
-                const position = getTreeOrnamentPosition(index);
+              {completedMembers.map(function(member, index) {
+                var originalIndex = members.findIndex(function(m) {
+                  return m._id === member._id;
+                });
+                var position = ornamentPositions[index];
                 return (
                   <div
                     key={member._id}
                     className="tree-ornament"
                     style={{ top: position.top, left: position.left }}
-                    title={`${member.name} completed their deed!`}
+                    title={member.name + ' completed their deed!'}
                   >
                     <Ornament color={getUserColor(originalIndex)} size={28} completed={true} onTree={true} />
                   </div>
@@ -139,9 +166,9 @@ const GroupTree: React.FC<GroupTreeProps> = ({ roundId, onViewDeed }) => {
             </div>
           </div>
         </section>
-      </main>
+      </div>
     </div>
   );
-};
+}
 
 export default GroupTree;

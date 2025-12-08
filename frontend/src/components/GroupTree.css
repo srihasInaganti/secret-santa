@@ -1,133 +1,70 @@
 @import url('https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@400;700&family=Quicksand:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg-festive: #8B2323;
   --bg-dark: #1a1a1a;
   --text-light: #FEFEFE;
   --text-muted: #D4D4D4;
   --tree-green: #228B22;
   --tree-green-dark: #1B6B1B;
   --gold: #FFD700;
-  --nav-border: #2D2D2D;
 }
 
 .group-tree-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--bg-festive) 0%, #6B1515 100%);
   font-family: 'Quicksand', sans-serif;
   color: var(--text-light);
-  position: relative;
-  overflow: hidden;
-}
-
-.group-tree-container::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
-    radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
-    radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.3), transparent);
-  background-size: 200px 200px;
-  animation: snow-fall 20s linear infinite;
-  pointer-events: none;
-  opacity: 0.5;
-}
-
-@keyframes snow-fall {
-  0% { background-position: 0 0; }
-  100% { background-position: 200px 400px; }
-}
-
-.tree-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--bg-dark);
-  border-bottom: 3px solid var(--nav-border);
-  position: relative;
   z-index: 10;
 }
 
-.nav-btn {
-  flex: 1;
-  padding: 1rem 1.5rem;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-family: 'Quicksand', sans-serif;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.nav-btn::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 3px;
-  background: var(--gold);
-  transition: all 0.3s ease;
-  transform: translateX(-50%);
-}
-
-.nav-btn:hover { color: var(--text-light); background: rgba(255,255,255,0.05); }
-.nav-btn:hover::after { width: 60%; }
-.nav-btn.active { color: var(--text-light); }
-.nav-btn.active::after { width: 80%; }
-
-.nav-btn.profile-btn {
-  border: 2px solid rgba(255,255,255,0.3);
-  margin: 0.5rem;
-  border-radius: 4px;
-  flex: 0 0 auto;
-  padding: 0.5rem 1.5rem;
-}
-
-.nav-btn.profile-btn:hover { border-color: var(--gold); color: var(--gold); }
-.nav-btn.profile-btn::after { display: none; }
-
+/* Main Content - CENTERED */
 .tree-content {
   display: flex;
-  padding: 2rem;
-  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  gap: 150px;
   min-height: calc(100vh - 70px);
-  position: relative;
-  z-index: 1;
+  padding: 40px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
+/* Members Panel */
 .members-panel {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  max-width: 450px;
 }
 
 .group-name {
   font-family: 'Mountains of Christmas', cursive;
-  font-size: 2rem;
+  font-size: 2.5rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin: 0 0 10px 0;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 .round-status {
   font-size: 1rem;
   margin-bottom: 1.5rem;
-  padding: 0.5rem 1rem;
+  padding: 8px 16px;
   border-radius: 20px;
   display: inline-block;
+  width: fit-content;
 }
 
-.round-status.pending { background: rgba(251,191,36,0.2); color: #FBBF24; }
-.round-status.started { background: rgba(52,211,153,0.2); color: #34D399; }
-.round-status.closed { background: rgba(96,165,250,0.2); color: #60A5FA; }
+.round-status.started {
+  background: rgba(52,211,153,0.2);
+  color: #34D399;
+}
 
-.no-members { color: var(--text-muted); font-style: italic; padding: 1rem 0; }
+.no-members {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 1rem 0;
+}
 
 .members-list {
   list-style: none;
@@ -135,28 +72,25 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .member-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0;
-  transition: transform 0.2s ease;
+  gap: 20px;
 }
 
-.member-item:hover { transform: translateX(8px); }
-
 .member-name {
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 700;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
 
 .deed-btn {
-  margin-top: auto;
-  padding: 1rem 2rem;
+  margin-top: 30px;
+  padding: 15px 30px;
   background: var(--bg-dark);
   border: none;
   border-radius: 50px;
@@ -165,19 +99,16 @@
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  align-self: flex-start;
   box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 
 .deed-btn:hover {
   background: #2D2D2D;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
 }
 
+/* Tree Panel */
 .tree-panel {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -185,17 +116,16 @@
 
 .tree-wrapper {
   position: relative;
-  width: 100%;
-  max-width: 400px;
-  aspect-ratio: 1;
+  width: 300px;
+  height: 350px;
 }
 
 .tree-star {
   position: absolute;
-  top: 0;
+  top: -20px;
   left: 50%;
-  transform: translateX(-50%) translateY(-20%);
-  font-size: 4rem;
+  transform: translateX(-50%);
+  font-size: 3rem;
   color: var(--gold);
   text-shadow: 0 0 20px var(--gold), 0 0 40px rgba(255,215,0,0.5);
   z-index: 10;
@@ -203,11 +133,14 @@
 }
 
 @keyframes star-glow {
-  0% { filter: brightness(1); text-shadow: 0 0 20px var(--gold), 0 0 40px rgba(255,215,0,0.5); }
-  100% { filter: brightness(1.2); text-shadow: 0 0 30px var(--gold), 0 0 60px rgba(255,215,0,0.7); }
+  0% { filter: brightness(1); }
+  100% { filter: brightness(1.3); }
 }
 
-.christmas-tree { width: 100%; height: 100%; }
+.christmas-tree {
+  width: 100%;
+  height: 100%;
+}
 
 .tree-layer {
   fill: var(--tree-green);
@@ -216,11 +149,18 @@
   filter: drop-shadow(4px 4px 8px rgba(0,0,0,0.3));
 }
 
-.tree-trunk { fill: #8B4513; stroke: #5D3A1A; stroke-width: 2; }
+.tree-trunk {
+  fill: #8B4513;
+  stroke: #5D3A1A;
+  stroke-width: 2;
+}
 
 .tree-ornaments {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 
@@ -230,16 +170,27 @@
   pointer-events: auto;
   cursor: pointer;
   z-index: 5;
+  animation: gentle-swing 3s ease-in-out infinite;
+  transform-origin: top center;
 }
 
-.tree-ornament:hover { z-index: 20; }
+.tree-ornament:nth-child(odd) {
+  animation-delay: -1.5s;
+}
 
+@keyframes gentle-swing {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-3deg); }
+  50% { transform: translate(-50%, -50%) rotate(3deg); }
+}
+
+/* Loading & Error States */
 .loading-state, .error-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: calc(100vh - 70px);
+  width: 100%;
   gap: 1rem;
 }
 
@@ -248,27 +199,31 @@
   animation: spin 3s linear infinite;
 }
 
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 .error-state button {
-  padding: 0.75rem 2rem;
+  padding: 12px 24px;
   background: var(--tree-green);
   border: none;
   border-radius: 8px;
   color: white;
   cursor: pointer;
+  font-size: 1rem;
 }
 
-@media (max-width: 900px) {
-  .tree-content { flex-direction: column; align-items: center; }
-  .members-panel { max-width: 100%; width: 100%; }
-  .tree-wrapper { max-width: 300px; }
-}
+/* Responsive */
+@media (max-width: 800px) {
+  .tree-content {
+    flex-direction: column;
+    gap: 40px;
+    padding: 20px;
+  }
 
-@media (max-width: 600px) {
-  .tree-nav { flex-wrap: wrap; }
-  .nav-btn { font-size: 0.9rem; padding: 0.75rem 1rem; }
-  .group-name { font-size: 1.5rem; }
-  .member-name { font-size: 1.1rem; }
-  .tree-star { font-size: 2.5rem; }
+  .tree-wrapper {
+    width: 250px;
+    height: 300px;
+  }
 }
