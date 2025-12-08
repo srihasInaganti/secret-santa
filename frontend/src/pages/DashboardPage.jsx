@@ -9,14 +9,18 @@ export default function DashboardPage() {
   var navigate = useNavigate();
 
   useEffect(function() {
-    // Get data from localStorage
     var storedUser = localStorage.getItem('user');
     var storedGroup = localStorage.getItem('group');
     var storedRound = localStorage.getItem('round');
 
-    if (!storedUser || !storedGroup || !storedRound) {
-      // Not logged in, redirect to login
+    if (!storedUser) {
       navigate('/login');
+      return;
+    }
+
+    if (!storedGroup || !storedRound) {
+      // Logged in but no group - go to profile
+      navigate('/profile');
       return;
     }
 
@@ -27,19 +31,13 @@ export default function DashboardPage() {
 
   if (!user || !group || !round) {
     return (
-      <>
-        <div style={{ paddingTop: '100px', color: 'white', textAlign: 'center' }}>
-          <p>Loading...</p>
-        </div>
-      </>
+      <div style={{ paddingTop: '100px', color: 'white', textAlign: 'center' }}>
+        <p>Loading...</p>
+      </div>
     );
   }
 
   return (
-    <>
-      <SnowForeground />
-      <SnowBackground />
-      <GroupTree roundId={round._id} groupName={group.name} />
-    </>
+    <GroupTree roundId={round._id} groupName={group.name} />
   );
 }

@@ -11,12 +11,17 @@ export default function LoginPage() {
   // Check if already logged in
   useEffect(function() {
     var storedUser = localStorage.getItem('user');
-    var storedGroup = localStorage.getItem('group');
-    var storedRound = localStorage.getItem('round');
 
-    if (storedUser && storedGroup && storedRound) {
-      // Already logged in, go to dashboard
-      navigate('/dashboard');
+    if (storedUser) {
+      // Already logged in
+      var storedGroup = localStorage.getItem('group');
+      var storedRound = localStorage.getItem('round');
+
+      if (storedGroup && storedRound) {
+        navigate('/dashboard');
+      } else {
+        navigate('/profile');
+      }
     }
   }, [navigate]);
 
@@ -31,22 +36,31 @@ export default function LoginPage() {
 
     try {
       var user = await login(name.trim());
+
+      // Always save user
+      localStorage.setItem('user', JSON.stringify(user));
+
+      // Try to get groups
       var groups = await getUserGroups(user._id);
 
       if (groups.length === 0) {
-        setError('You are not in any groups yet');
-        setLoading(false);
+        // No groups - go to profile
+        navigate('/profile');
         return;
       }
 
+      // Has groups - try to get current round
       var group = groups[0];
-      var round = await getCurrentRound(group._id);
 
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('group', JSON.stringify(group));
-      localStorage.setItem('round', JSON.stringify(round));
-
-      navigate('/dashboard');
+      try {
+        var round = await getCurrentRound(group._id);
+        localStorage.setItem('group', JSON.stringify(group));
+        localStorage.setItem('round', JSON.stringify(round));
+        navigate('/dashboard');
+      } catch (err) {
+        // Group exists but no active round - go to profile
+        navigate('/profile');
+      }
 
     } catch (err) {
       if (err instanceof Error) {
@@ -66,57 +80,55 @@ export default function LoginPage() {
   }
 
   return (
-    <>
-      <div style={{
-        width: '100vw',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        textAlign: 'center',
-        gap: '20px'
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'white',
+      textAlign: 'center',
+      gap: '20px'
+    }}>
+      <h1 style={{
+        fontFamily: "'Mountains of Christmas', cursive",
+        fontSize: '42px',
+        marginBottom: '20px'
       }}>
-        <h1 style={{
-          fontFamily: "'Mountains of Christmas', cursive",
-          fontSize: '42px',
-          marginBottom: '20px'
-        }}>
-          Log into your Group
-        </h1>
+        Log into your Group
+      </h1>
 
-        <input
-          type="text"
-          placeholder="Enter your name"
-          value={name}
-          onChange={function(e) { setName(e.target.value); }}
-          onKeyPress={handleKeyPress}
-          style={{
-            padding: '15px 20px',
-            fontSize: '18px',
-            borderRadius: '8px',
-            border: '2px solid #34D399',
-            background: 'rgba(0,0,0,0.3)',
-            color: 'white',
-            width: '300px',
-            fontFamily: "'Quicksand', sans-serif",
-            outline: 'none'
-          }}
-        />
+      <input
+        type="text"
+        placeholder="Enter your name"
+        value={name}
+        onChange={function(e) { setName(e.target.value); }}
+        onKeyPress={handleKeyPress}
+        style={{
+          padding: '15px 20px',
+          fontSize: '18px',
+          borderRadius: '8px',
+          border: '2px solid #34D399',
+          background: 'rgba(0,0,0,0.3)',
+          color: 'white',
+          width: '300px',
+          fontFamily: "'Quicksand', sans-serif",
+          outline: 'none'
+        }}
+      />
 
-        {error && (
-          <p style={{ color: '#F87171', margin: '0' }}>{error}</p>
-        )}
+      {error && (
+        <p style={{ color: '#F87171', margin: '0' }}>{error}</p>
+      )}
 
-        <button
-          className="btn-primary"
-          onClick={handleLogin}
-          disabled={loading}
-        >
-          {loading ? 'Loading...' : 'Login'}
-        </button>
-      </div>
-    </>
+      <button
+        className="btn-primary"
+        onClick={handleLogin}
+        disabled={loading}
+      >
+        {loading ? 'Loading...' : 'Login'}
+      </button>
+    </div>
   );
 }
