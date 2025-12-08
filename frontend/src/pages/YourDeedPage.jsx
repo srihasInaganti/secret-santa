@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyDeed, completeDeed, getGroup, getRound } from '../services/api';
-import { SnowForeground, SnowBackground } from "../components/Snow.jsx";
 
 export default function YourDeedPage() {
   var [user, setUser] = useState(null);
@@ -70,8 +69,6 @@ export default function YourDeedPage() {
   if (loading) {
     return (
       <>
-        <SnowForeground />
-        <SnowBackground />
         <div style={{
           width: '100vw',
           height: '100vh',

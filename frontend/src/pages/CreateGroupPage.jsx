@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, createGroup, joinGroup, createRound } from '../services/api';
-import {SnowForeground, SnowBackground} from "../components/Snow.jsx";
 
 export default function CreateGroupPage() {
   var [groupName, setGroupName] = useState('');
@@ -140,8 +139,6 @@ export default function CreateGroupPage() {
 
   return (
     <>
-      <SnowForeground />
-      <SnowBackground />
       <div style={{
         width: '100vw',
         minHeight: '100vh',

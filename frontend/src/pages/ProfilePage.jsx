@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUserGroups, getCurrentRound, getMyDeed } from '../services/api';
-import { SnowForeground, SnowBackground } from "../components/Snow.jsx";
 import Ornament from '../components/Ornament';
 
 export default function ProfilePage() {
@@ -86,8 +85,6 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <>
-        <SnowForeground />
-        <SnowBackground />
         <div style={{
           width: '100vw',
           height: '100vh',

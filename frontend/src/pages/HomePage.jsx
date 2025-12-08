@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {SnowForeground, SnowBackground} from "../components/Snow.jsx";
 
 export default function HomePage() {
   var navigate = useNavigate();
@@ -61,9 +60,6 @@ export default function HomePage() {
           <img src="/tree.png" alt="tree" style={{ height: "200px" }} />
         </div>
       </div>
-      {/*Snow Effects*/}
-      <SnowForeground />
-      <SnowBackground />
     </>
   );
 }

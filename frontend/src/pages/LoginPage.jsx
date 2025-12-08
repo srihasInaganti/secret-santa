@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, getUserGroups, getCurrentRound } from '../services/api';
-import {SnowForeground, SnowBackground} from "../components/Snow.jsx";
 
 export default function LoginPage() {
   var [name, setName] = useState('');
@@ -68,8 +67,6 @@ export default function LoginPage() {
 
   return (
     <>
-      <SnowForeground />
-      <SnowBackground />
       <div style={{
         width: '100vw',
         height: '100vh',

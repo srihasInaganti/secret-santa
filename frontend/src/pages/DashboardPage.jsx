@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GroupTree from '../components/GroupTree';
-import {SnowForeground, SnowBackground} from "../components/Snow.jsx";
 
 export default function DashboardPage() {
   var [user, setUser] = useState(null);
@@ -29,8 +28,6 @@ export default function DashboardPage() {
   if (!user || !group || !round) {
     return (
       <>
-        <SnowForeground />
-        <SnowBackground />
         <div style={{ paddingTop: '100px', color: 'white', textAlign: 'center' }}>
           <p>Loading...</p>
         </div>

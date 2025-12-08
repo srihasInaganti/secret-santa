@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import YourDeedPage from './pages/YourDeedPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import NavBar from './components/NavBar';
+import { SnowBackground, SnowForeground } from './components/Snow.jsx';
 import './components/NavBar.css';
 
 function AppContent() {
@@ -37,6 +38,10 @@ function AppContent() {
 
   return (
     <>
+      {/* Snow is now global - persists across page changes */}
+      <SnowBackground />
+      <SnowForeground />
+
       {showNavBar && <NavBar activeTab={getActiveTab()} onTabChange={handleTabChange} />}
       <Routes>
         <Route path="/" element={<HomePage />} />
