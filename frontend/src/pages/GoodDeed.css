@@ -1,42 +1,64 @@
-.gooddeed-page {
-    background-color: #8b0000;
-    min-height: 100vh;
-    padding-top: 20px;
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Arial', sans-serif;
+  }
+  
+  .gooddeed-page {
+    background: linear-gradient(135deg, #8b0000, #b22222);
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     color: white;
     text-align: center;
-    font-family: Arial, sans-serif;
+    padding: 20px;
   }
   
-  .card {
-    background-color: #8b0000;
-    margin: 40px auto;
-    padding: 40px;
-    width: 70%;
-    border-radius: 10px;
+  .navbar {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    font-size: 18px;
+    position: absolute;
+    top: 20px;
+    width: 100%;
   }
   
-  .avatar {
-    border-radius: 50%;
-    width: 120px;
-    margin-bottom: 20px;
-  }
-  
-  .title {
-    font-size: 28px;
-    margin-top: 10px;
-  }
-  
-  .name {
-    font-size: 36px;
+  .navbar .active {
     font-weight: bold;
-    margin-bottom: 25px;
+    text-decoration: underline;
   }
   
-  .deed {
-    font-size: 32px;
+  .content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    background-color: rgba(255, 255, 255, 0.08);
+    padding: 50px 60px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    max-width: 700px;
+    width: 90%;
+  }
+  
+  .section-title {
+    font-size: 24px;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  
+  .name,
+  .deed-section .deed {
+    font-size: 32px; /* same size for both target and deed */
     font-weight: bold;
-    margin: 20px auto;
-    max-width: 600px;
+    margin: 0;
+    line-height: 1.5;
   }
   
   .snowman {
@@ -45,17 +67,54 @@
   }
   
   .complete-btn {
-    background-color: green;
+    background-color: #32cd32;
     color: white;
     font-size: 20px;
-    padding: 15px 25px;
-    border-radius: 10px;
+    padding: 15px 35px;
+    border-radius: 12px;
     border: none;
     cursor: pointer;
-    margin-top: 20px;
+    transition: all 0.3s ease;
   }
   
   .complete-btn:hover {
-    opacity: 0.8;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+  }
+  
+  @media (max-width: 768px) {
+    .content-wrapper {
+      padding: 35px 40px;
+      gap: 30px;
+    }
+    .name,
+    .deed-section .deed {
+      font-size: 28px;
+    }
+    .snowman {
+      font-size: 50px;
+    }
+    .complete-btn {
+      font-size: 18px;
+      padding: 12px 25px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .content-wrapper {
+      padding: 25px 30px;
+      gap: 25px;
+    }
+    .name,
+    .deed-section .deed {
+      font-size: 24px;
+    }
+    .snowman {
+      font-size: 40px;
+    }
+    .complete-btn {
+      font-size: 16px;
+      padding: 10px 20px;
+    }
   }
   
