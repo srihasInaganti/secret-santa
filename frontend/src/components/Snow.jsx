@@ -93,7 +93,7 @@ const Snow = ({ zIndex = 9999, density = 1 }) => {
   );
 };
 
-export const SnowBackground = () => <Snow zIndex={1} density={0.5} />;
-export const SnowForeground = () => <Snow zIndex={9999} density={0.5} />;
+export const SnowBackground = () => <Snow zIndex={1} density={.9} />;
+export const SnowForeground = () => <Snow zIndex={9999} density={.9} />;
 
 export default Snow;

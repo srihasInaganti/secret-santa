@@ -32,7 +32,6 @@ function AppContent() {
     if (tab === 'create') navigate('/create');
   }
 
-  // Hide NavBar only on home page
   var showNavBar = location.pathname !== '/';
 
   return (

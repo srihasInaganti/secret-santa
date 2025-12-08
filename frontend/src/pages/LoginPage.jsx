@@ -32,22 +32,11 @@ export default function LoginPage() {
 
     try {
       var user = await login(name.trim());
-      var groups = await getUserGroups(user._id);
-
-      if (groups.length === 0) {
-        setError('You are not in any groups yet');
-        setLoading(false);
-        return;
-      }
-
-      var group = groups[0];
-      var round = await getCurrentRound(group._id);
 
       localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('group', JSON.stringify(group));
-      localStorage.setItem('round', JSON.stringify(round));
 
-      navigate('/dashboard');
+
+      navigate('/profile');
 
     } catch (err) {
       if (err instanceof Error) {
@@ -86,7 +75,7 @@ export default function LoginPage() {
           fontSize: '42px',
           marginBottom: '20px'
         }}>
-          Log into your Group
+          Check out your Groups!
         </h1>
 
         <input

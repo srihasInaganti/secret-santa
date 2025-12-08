@@ -4,10 +4,24 @@ import Ornament from './Ornament';
 import Celebration from './Celebration';
 import './GroupTree.css';
 
-const ORNAMENT_COLORS = [
-  '#E879F9', '#FB923C', '#60A5FA', '#A3E635',
-  '#F87171', '#FBBF24', '#34D399', '#A78BFA',
+const FESTIVE_COLORS = [
+  '#F87171', // red
+  '#EF4444', // bright red
+  '#DC2626', // deep red
+  '#34D399', // green
+  '#10B981', // emerald
+  '#047857', // dark green
+  '#FBBF24', // gold
+  '#F59E0B', // amber
+  '#B45309', // dark gold
+  '#A78BFA', // purple
+  '#C084FC', // lilac
+  '#FB923C', // orange
+  '#F97316', // bright orange
+  '#60A5FA', // blue
+  '#3B82F6', // royal blue
 ];
+
 
 function generateRandomPosition(index: number, seed: string) {
   var hash = (seed + index).split('').reduce(function(a, b) {
@@ -82,9 +96,16 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
     }
   }
 
-  function getUserColor(index: number) {
-    return ORNAMENT_COLORS[index % ORNAMENT_COLORS.length];
-  }
+    function getUserColor(memberId: string) {
+      let hash = 0;
+      for (let i = 0; i < memberId.length; i++) {
+        hash = (hash << 5) - hash + memberId.charCodeAt(i);
+        hash |= 0; // convert to 32bit integer
+      }
+      const index = Math.abs(hash) % FESTIVE_COLORS.length;
+      return FESTIVE_COLORS[index];
+    }
+
 
   var completedMembers = members.filter(function(m) {
     return m.completed;
@@ -145,7 +166,7 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
                   <span className="member-name">
                     {member.name}: {member.completed ? 'Complete' : 'Incomplete'}
                   </span>
-                  <Ornament color={getUserColor(index)} size={40} completed={member.completed} />
+                  <Ornament color={getUserColor(member._id)} size={40} completed={member.completed} />
                 </li>
               );
             })}
@@ -183,7 +204,7 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
                     style={{ top: position.top, left: position.left }}
                     title={member.name + ' completed their deed!'}
                   >
-                    <Ornament color={getUserColor(originalIndex)} size={28} completed={true} onTree={true} />
+                    <Ornament color={getUserColor(member._id)} size={28} completed={true} onTree={true} />
                   </div>
                 );
               })}
