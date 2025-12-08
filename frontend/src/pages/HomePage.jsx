@@ -1,13 +1,19 @@
+import { useNavigate } from 'react-router-dom';
 import {SnowForeground, SnowBackground} from "../components/Snow.jsx";
-import "../components/NavBar.css";
 
 export default function HomePage() {
+  var navigate = useNavigate();
+
+  function goToCreateGroup() {
+    navigate('/create');
+  }
+
+  function goToLogin() {
+    navigate('/login');
+  }
+
   return (
     <>
-      {/*Snow Effects*/}
-      <SnowForeground />
-      <SnowBackground />
-
       <div style={{
         width: "100vw",
         height: "100vh",
@@ -35,13 +41,16 @@ export default function HomePage() {
           <img src="/tree.png" alt="tree" style={{ height: "200px" }} />
 
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            <button className="btn-primary">Create a new Group</button>
-            <button className="btn-primary">Log into your Group</button>
+            <button className="btn-primary" onClick={goToCreateGroup}>Create a new Group</button>
+            <button className="btn-primary" onClick={goToLogin}>Log into your Group</button>
           </div>
 
           <img src="/tree.png" alt="tree" style={{ height: "200px" }} />
         </div>
       </div>
+      {/*Snow Effects*/}
+      <SnowForeground />
+      <SnowBackground />
     </>
   );
 }

@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { getRound, getRoundStatus, MemberStatus, Round } from '../services/api';
-import NavBar from './NavBar';
 import Ornament from './Ornament';
 import './GroupTree.css';
 
@@ -28,7 +27,7 @@ function generateRandomPosition(index: number, seed: string) {
   };
 }
 
-function GroupTree(props: { roundId: string; groupName?: string; onNavigate?: Function }) {
+function GroupTree(props: { roundId: string; groupName?: string }) {
   var [members, setMembers] = useState<MemberStatus[]>([]);
   var [round, setRound] = useState<Round | null>(null);
   var [loading, setLoading] = useState(true);
@@ -70,16 +69,9 @@ function GroupTree(props: { roundId: string; groupName?: string; onNavigate?: Fu
     });
   }, [completedMembers]);
 
-  function handleTabChange(tab: string) {
-    if (props.onNavigate) {
-      props.onNavigate(tab);
-    }
-  }
-
   if (loading) {
     return (
       <div className="group-tree-container">
-        <NavBar activeTab="group" onTabChange={handleTabChange} />
         <div className="loading-state">
           <div className="snowflake">❄</div>
           <p>Loading your group...</p>
@@ -91,7 +83,6 @@ function GroupTree(props: { roundId: string; groupName?: string; onNavigate?: Fu
   if (error) {
     return (
       <div className="group-tree-container">
-        <NavBar activeTab="group" onTabChange={handleTabChange} />
         <div className="error-state">
           <p>🎄 Oops! {error}</p>
           <button onClick={function() { window.location.reload(); }}>Try Again</button>
@@ -104,8 +95,6 @@ function GroupTree(props: { roundId: string; groupName?: string; onNavigate?: Fu
 
   return (
     <div className="group-tree-container">
-      <NavBar activeTab="group" onTabChange={handleTabChange} />
-
       <div className="tree-content">
         <section className="members-panel">
           <h2 className="group-name">[{groupName}]</h2>
@@ -131,9 +120,7 @@ function GroupTree(props: { roundId: string; groupName?: string; onNavigate?: Fu
             <p className="no-members">No members yet!</p>
           )}
 
-          <button className="deed-btn" onClick={function() { handleTabChange('deed'); }}>
-            See your good deed!
-          </button>
+          <button className="deed-btn">See your good deed!</button>
         </section>
 
         <section className="tree-panel">

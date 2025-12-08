@@ -8,6 +8,10 @@
   border-bottom: 3px solid #2D2D2D;
   width: 100%;
   box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
 }
 
 .nav-btn {
