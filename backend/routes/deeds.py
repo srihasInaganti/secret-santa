@@ -59,7 +59,6 @@ async def get_random_deed(db: AsyncIOMotorDatabase = Depends(get_db)):
     """Get a random deed from the pool"""
     templates_col = db["deed_templates"]
 
-    # Get all templates
     templates = []
     async for t in templates_col.find():
         t["_id"] = str(t["_id"])
@@ -73,26 +72,25 @@ async def get_random_deed(db: AsyncIOMotorDatabase = Depends(get_db)):
 
 @router.post("/seed")
 async def seed_deed_templates(db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Seed the database with default deed templates"""
+    """Seed the database with default deed templates - use {target} as placeholder"""
     templates_col = db["deed_templates"]
 
-    # EDIT DEEDS HERE
     default_deeds = [
-        "Compliment someone 3 times today",
-        "Buy a coworker their favorite drink",
-        "Write a thank you note to someone",
-        "Help someone with a task without being asked",
-        "Share a genuine compliment in a meeting",
-        "Bring snacks to share with the team",
-        "Send an encouraging message to someone",
-        "Offer to help someone with their work",
-        "Give someone a small surprise gift",
-        "Tell someone why you appreciate them",
-        "Hold the door open for others all day",
-        "Clean up a shared space without being asked",
-        "Leave a positive sticky note for someone",
-        "Offer to grab lunch for a busy coworker",
-        "Share credit for a success with others",
+        "Give {target} a genuine compliment",
+        "Buy {target} their favorite drink or snack",
+        "Write a thank you note to {target}",
+        "Help {target} with a task without being asked",
+        "Send {target} an encouraging message",
+        "Tell {target} why you appreciate them",
+        "Offer to grab lunch for {target}",
+        "Give {target} a small surprise gift",
+        "Share a positive memory you have with {target}",
+        "Do one of {target}'s chores or tasks for them",
+        "Leave a kind sticky note for {target}",
+        "Make {target} laugh today",
+        "Ask {target} how their day is going and really listen",
+        "Compliment {target}'s work in front of others",
+        "Bring {target}'s favorite treat to share",
     ]
 
     count = 0

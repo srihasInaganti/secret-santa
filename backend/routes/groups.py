@@ -17,6 +17,95 @@ from models import Group, GroupCreate, User, Round, RoundCreate
 router = APIRouter(prefix="/groups", tags=["groups"])
 
 
+async def get_random_deed_template(db: AsyncIOMotorDatabase) -> str:
+    """Helper to get a random deed template"""
+    templates_col = db["deed_templates"]
+    templates = []
+    async for t in templates_col.find():
+        templates.append(t["description"])
+
+    if not templates:
+        templates = [
+            "Do something kind for {target} today",
+            "Give {target} a genuine compliment",
+            "Help {target} with a task without being asked",
+            "Buy {target} their favorite drink or snack",
+            "Write a thank you note to {target}",
+            "Send {target} an encouraging message",
+        ]
+
+    return random.choice(templates)
+
+
+async def assign_deeds_to_members(db: AsyncIOMotorDatabase, round_id: str, group_id: str):
+    """Assign random deeds to all group members, each targeting another member"""
+    members_col = db["group_members"]
+    users_col = db["users"]
+    deeds_col = db["deeds"]
+
+    # Get all group members with their user info
+    members = []
+    async for m in members_col.find({"group_id": group_id}):
+        user = await users_col.find_one({"_id": ObjectId(m["user_id"])})
+        if user:
+            members.append({
+                "user_id": m["user_id"],
+                "name": user["name"]
+            })
+
+    if len(members) < 2:
+        for member in members:
+            deed_template = await get_random_deed_template(db)
+            deed_description = deed_template.replace("{target}", "someone")
+            await deeds_col.insert_one({
+                "round_id": round_id,
+                "user_id": member["user_id"],
+                "target_user_id": None,
+                "target_user_name": None,
+                "deed_description": deed_description,
+                "completed": False,
+                "completed_at": None,
+                "created_at": datetime.utcnow(),
+            })
+        return
+
+    # Create a shuffled list of targets (Secret Santa style)
+    member_ids = [m["user_id"] for m in members]
+    targets = member_ids.copy()
+
+    # Shuffle until no one is assigned to themselves
+    max_attempts = 100
+    for _ in range(max_attempts):
+        random.shuffle(targets)
+        valid = True
+        for i, member_id in enumerate(member_ids):
+            if member_id == targets[i]:
+                valid = False
+                break
+        if valid:
+            break
+
+    # Assign deeds
+    for i, member in enumerate(members):
+        target_id = targets[i]
+        target_member = next((m for m in members if m["user_id"] == target_id), None)
+        target_name = target_member["name"] if target_member else "someone"
+
+        deed_template = await get_random_deed_template(db)
+        deed_description = deed_template.replace("{target}", target_name)
+
+        await deeds_col.insert_one({
+            "round_id": round_id,
+            "user_id": member["user_id"],
+            "target_user_id": target_id,
+            "target_user_name": target_name,
+            "deed_description": deed_description,
+            "completed": False,
+            "completed_at": None,
+            "created_at": datetime.utcnow(),
+        })
+
+
 @router.get("/", response_model=List[Group])
 async def list_groups(db: AsyncIOMotorDatabase = Depends(get_db)):
     """List all groups"""
@@ -109,9 +198,6 @@ async def create_round(group_id: str, payload: RoundCreate, db: AsyncIOMotorData
     """Start a new weekly round and assign random deeds to all members"""
     groups_col = db["groups"]
     rounds_col = db["rounds"]
-    members_col = db["group_members"]
-    templates_col = db["deed_templates"]
-    deeds_col = db["deeds"]
 
     # Check group exists
     group = await groups_col.find_one({"_id": ObjectId(group_id)})
@@ -135,35 +221,8 @@ async def create_round(group_id: str, payload: RoundCreate, db: AsyncIOMotorData
     round_id = str(res.inserted_id)
     round_doc["_id"] = round_id
 
-    # Get all deed templates
-    templates = []
-    async for t in templates_col.find():
-        templates.append(t["description"])
-
-    # Fallback if no templates exist
-    if not templates:
-        templates = [
-            "Do something kind for someone today",
-            "Compliment a coworker",
-            "Help someone without being asked",
-        ]
-
-    # Get all group members
-    members = []
-    async for m in members_col.find({"group_id": group_id}):
-        members.append(m["user_id"])
-
-    # Assign random deed to each member
-    for user_id in members:
-        deed_description = random.choice(templates)
-        await deeds_col.insert_one({
-            "round_id": round_id,
-            "user_id": user_id,
-            "deed_description": deed_description,
-            "completed": False,
-            "completed_at": None,
-            "created_at": datetime.utcnow(),
-        })
+    # Assign deeds to all members with target users
+    await assign_deeds_to_members(db, round_id, group_id)
 
     return Round(**round_doc)
 

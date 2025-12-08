@@ -43,7 +43,7 @@ class Round(BaseModel):
     id: str = Field(alias="_id")
     group_id: str
     name: str
-    status: str  # "active" or "completed"
+    status: str  # "active", "completed", or "celebrating"
     created_at: Optional[datetime] = None
 
     class Config:
@@ -53,7 +53,7 @@ class Round(BaseModel):
 # ============ DEED TEMPLATES ============
 
 class DeedTemplateCreate(BaseModel):
-    description: str  # e.g., "Compliment someone 3 times"
+    description: str  # e.g., "Compliment {target} 3 times" - use {target} as placeholder
 
 
 class DeedTemplate(BaseModel):
@@ -71,9 +71,23 @@ class DeedAssignment(BaseModel):
     id: str = Field(alias="_id")
     round_id: str
     user_id: str
-    deed_description: str
+    target_user_id: Optional[str] = None  # The person the deed is for
+    target_user_name: Optional[str] = None  # The person's name
+    deed_description: str  # Full description with target name inserted
     completed: bool = False
     completed_at: Optional[datetime] = None
+
+    class Config:
+        populate_by_name = True
+
+
+# ============ USER CELEBRATION TRACKING ============
+
+class CelebrationSeen(BaseModel):
+    id: str = Field(alias="_id")
+    round_id: str
+    user_id: str
+    seen_at: datetime
 
     class Config:
         populate_by_name = True

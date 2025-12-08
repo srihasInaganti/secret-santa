@@ -2,20 +2,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.3s ease;
-}
-
-.ornament-wrapper:hover {
-  transform: scale(1.1);
-}
-
-.ornament-wrapper.on-tree {
-  animation: gentle-swing 3s ease-in-out infinite;
-  transform-origin: top center;
-}
-
-.ornament-wrapper.on-tree:nth-child(odd) {
-  animation-delay: -1.5s;
+  transition: all 0.3s ease;
 }
 
 .ornament-svg {
@@ -24,43 +11,18 @@
   overflow: visible;
 }
 
-.ornament-ball {
-  transition: all 0.3s ease;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
 .ornament-wrapper.completed .ornament-ball {
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 12px currentColor);
+  filter: drop-shadow(0 0 8px currentColor);
 }
 
 .ornament-wrapper.incomplete .ornament-ball {
-  opacity: 0.85;
+  opacity: 0.5;
 }
 
-.ornament-shine {
-  opacity: 0.4;
-  transition: opacity 0.3s ease;
+.ornament-wrapper.on-tree {
+  filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.4));
 }
 
-.ornament-wrapper:hover .ornament-shine {
-  opacity: 0.6;
-}
-
-@keyframes gentle-swing {
-  0%, 100% { transform: rotate(-3deg); }
-  50% { transform: rotate(3deg); }
-}
-
-.ornament-wrapper.completed.on-tree::after {
-  content: '✨';
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  font-size: 12px;
-  animation: sparkle 2s ease-in-out infinite;
-}
-
-@keyframes sparkle {
-  0%, 100% { opacity: 0; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1); }
+.ornament-wrapper.on-tree.completed .ornament-ball {
+  filter: drop-shadow(0 0 12px currentColor);
 }

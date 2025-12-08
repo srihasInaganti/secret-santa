@@ -1,30 +1,56 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { getRound, getRoundStatus, checkRoundComplete, advanceToNextRound, MemberStatus, Round } from '../services/api';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getRound, getRoundStatus, checkRoundComplete, advanceToNextRound, markCelebrationSeen, MemberStatus, Round } from '../services/api';
 import Ornament from './Ornament';
 import Celebration from './Celebration';
 import './GroupTree.css';
 
 const ORNAMENT_COLORS = [
-  '#E879F9', '#FB923C', '#60A5FA', '#A3E635',
-  '#F87171', '#FBBF24', '#34D399', '#A78BFA',
+  '#DC2626', '#FFD700', '#16A34A', '#2563EB',
+  '#DC2626', '#9333EA', '#FFD700', '#EC4899',
+  '#F97316', '#14B8A6',
 ];
 
-function generateRandomPosition(index: number, seed: string) {
-  var hash = (seed + index).split('').reduce(function(a, b) {
+const ORNAMENT_POSITIONS = [
+  { top: '18%', left: '50%' },
+  { top: '28%', left: '38%' },
+  { top: '28%', left: '62%' },
+  { top: '40%', left: '30%' },
+  { top: '40%', left: '50%' },
+  { top: '40%', left: '70%' },
+  { top: '52%', left: '25%' },
+  { top: '52%', left: '42%' },
+  { top: '52%', left: '58%' },
+  { top: '52%', left: '75%' },
+  { top: '65%', left: '20%' },
+  { top: '65%', left: '35%' },
+  { top: '65%', left: '50%' },
+  { top: '65%', left: '65%' },
+  { top: '65%', left: '80%' },
+  { top: '78%', left: '18%' },
+  { top: '78%', left: '32%' },
+  { top: '78%', left: '50%' },
+  { top: '78%', left: '68%' },
+  { top: '78%', left: '82%' },
+];
+
+function getOrnamentPosition(index: number, odId: string) {
+  if (index < ORNAMENT_POSITIONS.length) {
+    return ORNAMENT_POSITIONS[index];
+  }
+
+  var basePosition = ORNAMENT_POSITIONS[index % ORNAMENT_POSITIONS.length];
+  var hash = odId.split('').reduce(function(a, b) {
     a = ((a << 5) - a) + b.charCodeAt(0);
     return a & a;
   }, 0);
 
-  var topPercent = 20 + Math.abs(hash % 55);
-  var narrowness = (topPercent - 20) / 55;
-  var minLeft = 35 - (narrowness * 15);
-  var maxLeft = 65 + (narrowness * 15);
-  var leftRange = maxLeft - minLeft;
-  var leftPercent = minLeft + (Math.abs((hash * 7) % 100) / 100 * leftRange);
+  var offsetX = (Math.abs(hash) % 10) - 5;
+  var offsetY = (Math.abs(hash * 7) % 10) - 5;
 
   return {
-    top: topPercent + '%',
-    left: leftPercent + '%',
+    top: `calc(${basePosition.top} + ${offsetY}px)`,
+    left: `calc(${basePosition.left} + ${offsetX}px)`,
   };
 }
 
@@ -35,6 +61,16 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
   var [error, setError] = useState<string | null>(null);
   var [showCelebration, setShowCelebration] = useState(false);
   var [currentRoundId, setCurrentRoundId] = useState(props.roundId);
+  var [pendingNewRoundId, setPendingNewRoundId] = useState<string | null>(null);
+  var navigate = useNavigate();
+
+  function getCurrentUser() {
+    var storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      return JSON.parse(storedUser);
+    }
+    return null;
+  }
 
   useEffect(function() {
     loadData();
@@ -44,16 +80,38 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
     try {
       setLoading(true);
       setError(null);
+
+      var user = getCurrentUser();
+      var userId = user ? user._id : null;
+
+      // First check completion status
+      var completion = await checkRoundComplete(currentRoundId, userId);
+
+      console.log('Completion check:', completion); // Debug log
+
+      // If user should see celebration
+      if (completion.show_celebration) {
+        // If round already completed, store the new round ID for after celebration
+        if (completion.round_completed && completion.new_round_id) {
+          setPendingNewRoundId(completion.new_round_id);
+        }
+        setShowCelebration(true);
+        setLoading(false);
+        return;
+      }
+
+      // If round completed but user already saw celebration, go to new round
+      if (completion.round_completed && completion.new_round_id && !completion.show_celebration) {
+        await switchToNewRound(completion.new_round_id);
+        return;
+      }
+
+      // Load current round data normally
       var roundData = await getRound(currentRoundId);
       var statusData = await getRoundStatus(currentRoundId);
       setRound(roundData);
       setMembers(statusData);
 
-      // Check if all complete
-      var completion = await checkRoundComplete(currentRoundId);
-      if (completion.all_complete && completion.total_members > 0) {
-        setShowCelebration(true);
-      }
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -65,9 +123,35 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
     }
   }
 
+  async function switchToNewRound(newRoundId: string) {
+    try {
+      var newRound = await getRound(newRoundId);
+      localStorage.setItem('round', JSON.stringify(newRound));
+      setCurrentRoundId(newRoundId);
+      setPendingNewRoundId(null);
+    } catch (err) {
+      console.error('Failed to switch to new round:', err);
+    }
+  }
+
   async function handleCelebrationComplete() {
     try {
-      // Advance to next round
+      var user = getCurrentUser();
+
+      // Mark that this user has seen the celebration
+      if (user) {
+        await markCelebrationSeen(currentRoundId, user._id);
+      }
+
+      setShowCelebration(false);
+
+      // If there's already a new round (another user advanced it)
+      if (pendingNewRoundId) {
+        await switchToNewRound(pendingNewRoundId);
+        return;
+      }
+
+      // Otherwise, advance to next round (first user to complete)
       var newRound = await advanceToNextRound(currentRoundId);
 
       // Update localStorage
@@ -75,10 +159,8 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
 
       // Update state
       setCurrentRoundId(newRound._id);
-      setShowCelebration(false);
     } catch (err) {
       console.error('Failed to advance round:', err);
-      setShowCelebration(false);
     }
   }
 
@@ -86,15 +168,13 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
     return ORNAMENT_COLORS[index % ORNAMENT_COLORS.length];
   }
 
+  function handleSeeDeed() {
+    navigate('/deed');
+  }
+
   var completedMembers = members.filter(function(m) {
     return m.completed;
   });
-
-  var ornamentPositions = useMemo(function() {
-    return completedMembers.map(function(member, index) {
-      return generateRandomPosition(index, member._id);
-    });
-  }, [completedMembers]);
 
   if (loading) {
     return (
@@ -118,14 +198,19 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
     );
   }
 
+  // Show celebration overlay
+  if (showCelebration) {
+    return (
+      <div className="group-tree-container">
+        <Celebration onComplete={handleCelebrationComplete} />
+      </div>
+    );
+  }
+
   var groupName = props.groupName || (round ? round.name : 'Group');
 
   return (
     <div className="group-tree-container">
-      {showCelebration && (
-        <Celebration onComplete={handleCelebrationComplete} />
-      )}
-
       <div className="tree-content">
         <section className="members-panel">
           <h2 className="group-name">[{groupName}]</h2>
@@ -155,7 +240,7 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
             <p className="no-members">No members yet!</p>
           )}
 
-          <button className="deed-btn" onClick={function() { window.location.href = '/deed'; }}>
+          <button className="deed-btn" onClick={handleSeeDeed}>
             See your good deed!
           </button>
         </section>
@@ -175,7 +260,7 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
                 var originalIndex = members.findIndex(function(m) {
                   return m._id === member._id;
                 });
-                var position = ornamentPositions[index];
+                var position = getOrnamentPosition(index, member._id);
                 return (
                   <div
                     key={member._id}

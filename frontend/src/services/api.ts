@@ -16,7 +16,7 @@ export interface Round {
   _id: string;
   group_id: string;
   name: string;
-  status: 'active' | 'completed';
+  status: 'active' | 'completed' | 'celebrating';
 }
 
 export interface MemberStatus {
@@ -30,6 +30,8 @@ export interface DeedAssignment {
   _id: string;
   round_id: string;
   user_id: string;
+  target_user_id?: string;
+  target_user_name?: string;
   deed_description: string;
   completed: boolean;
   completed_at?: string;
@@ -45,6 +47,9 @@ export interface RoundCompletion {
   total_members: number;
   completed_count: number;
   all_complete: boolean;
+  show_celebration: boolean;
+  round_completed: boolean;
+  new_round_id: string | null;
 }
 
 // ============ Users ============
@@ -126,10 +131,21 @@ export async function getRoundStatus(roundId: string): Promise<MemberStatus[]> {
   return response.json();
 }
 
-export async function checkRoundComplete(roundId: string): Promise<RoundCompletion> {
-  const response = await fetch(`${API_BASE}/rounds/${roundId}/check-complete`);
+export async function checkRoundComplete(roundId: string, userId?: string): Promise<RoundCompletion> {
+  let url = `${API_BASE}/rounds/${roundId}/check-complete`;
+  if (userId) {
+    url += `?user_id=${userId}`;
+  }
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to check completion');
   return response.json();
+}
+
+export async function markCelebrationSeen(roundId: string, userId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/rounds/${roundId}/celebration-seen?user_id=${userId}`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to mark celebration seen');
 }
 
 export async function advanceToNextRound(roundId: string): Promise<Round> {
