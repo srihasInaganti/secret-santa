@@ -8,11 +8,23 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from bson import ObjectId
 
 from main import get_db
 from models import Group, GroupCreate, User, Round, RoundCreate
 
 router = APIRouter(prefix="/groups", tags=["groups"])
+
+
+@router.get("/", response_model=List[Group])
+async def list_groups(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """List all groups"""
+    groups_col = db["groups"]
+    items = []
+    async for g in groups_col.find():
+        g["_id"] = str(g["_id"])
+        items.append(Group(**g))
+    return items
 
 
 @router.post("/", response_model=Group)
@@ -29,22 +41,11 @@ async def create_group(payload: GroupCreate, db: AsyncIOMotorDatabase = Depends(
     return Group(**doc)
 
 
-@router.get("/", response_model=List[Group])
-async def list_groups(db: AsyncIOMotorDatabase = Depends(get_db)):
-    """List all groups"""
-    groups_col = db["groups"]
-    items = []
-    async for g in groups_col.find():
-        g["_id"] = str(g["_id"])
-        items.append(Group(**g))
-    return items
-
-
 @router.get("/{group_id}", response_model=Group)
 async def get_group(group_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
     """Get group details"""
     groups_col = db["groups"]
-    group = await groups_col.find_one({"_id": __import__("bson").ObjectId(group_id)})
+    group = await groups_col.find_one({"_id": ObjectId(group_id)})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     group["_id"] = str(group["_id"])
@@ -52,23 +53,21 @@ async def get_group(group_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
 
 
 @router.post("/{group_id}/join", response_model=dict)
-async def join_group(group_id: str, username: str = Query(...), db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Join a group by username"""
+async def join_group(group_id: str, user_id: str = Query(...), db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Join a group by user_id"""
     groups_col = db["groups"]
     users_col = db["users"]
     members_col = db["group_members"]
 
     # Check group exists
-    group = await groups_col.find_one({"_id": __import__("bson").ObjectId(group_id)})
+    group = await groups_col.find_one({"_id": ObjectId(group_id)})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    # Get user
-    user = await users_col.find_one({"username": username})
+    # Check user exists
+    user = await users_col.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
-    user_id = str(user["_id"])
 
     # Add to group (upsert)
     await members_col.update_one(
@@ -77,7 +76,7 @@ async def join_group(group_id: str, username: str = Query(...), db: AsyncIOMotor
         upsert=True,
     )
 
-    return {"joined": True, "group_id": group_id, "username": username}
+    return {"joined": True, "group_id": group_id, "user_id": user_id}
 
 
 @router.get("/{group_id}/members", response_model=List[User])
@@ -89,11 +88,22 @@ async def get_group_members(group_id: str, db: AsyncIOMotorDatabase = Depends(ge
     cursor = members_col.find({"group_id": group_id})
     users = []
     async for m in cursor:
-        user = await users_col.find_one({"_id": __import__("bson").ObjectId(m["user_id"])})
+        user = await users_col.find_one({"_id": ObjectId(m["user_id"])})
         if user:
             user["_id"] = str(user["_id"])
             users.append(User(**user))
     return users
+
+
+@router.get("/{group_id}/rounds", response_model=List[Round])
+async def list_rounds(group_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """List all rounds in a group"""
+    rounds_col = db["rounds"]
+    items = []
+    async for r in rounds_col.find({"group_id": group_id}).sort("created_at", -1):
+        r["_id"] = str(r["_id"])
+        items.append(Round(**r))
+    return items
 
 
 @router.post("/{group_id}/rounds", response_model=Round)
@@ -103,7 +113,7 @@ async def create_round(group_id: str, payload: RoundCreate, db: AsyncIOMotorData
     rounds_col = db["rounds"]
 
     # Check group exists
-    group = await groups_col.find_one({"_id": __import__("bson").ObjectId(group_id)})
+    group = await groups_col.find_one({"_id": ObjectId(group_id)})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
@@ -123,17 +133,6 @@ async def create_round(group_id: str, payload: RoundCreate, db: AsyncIOMotorData
     res = await rounds_col.insert_one(doc)
     doc["_id"] = str(res.inserted_id)
     return Round(**doc)
-
-
-@router.get("/{group_id}/rounds", response_model=List[Round])
-async def list_rounds(group_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
-    """List all rounds in a group"""
-    rounds_col = db["rounds"]
-    items = []
-    async for r in rounds_col.find({"group_id": group_id}).sort("created_at", -1):
-        r["_id"] = str(r["_id"])
-        items.append(Round(**r))
-    return items
 
 
 @router.get("/{group_id}/current-round", response_model=Round)

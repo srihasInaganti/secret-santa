@@ -6,13 +6,11 @@ from datetime import datetime
 # ============ USERS ============
 
 class UserCreate(BaseModel):
-    username: str
     name: str
 
 
 class User(BaseModel):
     id: str = Field(alias="_id")
-    username: str
     name: str
     created_at: Optional[datetime] = None
 
@@ -68,7 +66,6 @@ class Deed(BaseModel):
 
 class MemberStatus(BaseModel):
     id: str = Field(alias="_id")
-    username: str
     name: str
     completed: bool
 

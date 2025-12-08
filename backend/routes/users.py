@@ -8,31 +8,12 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from bson import ObjectId
 
 from main import get_db
-from models import User, UserCreate
+from models import User, UserCreate, Group
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-
-@router.post("/", response_model=User)
-async def create_user(payload: UserCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Create a new user"""
-    users_col = db["users"]
-
-    # Check if username exists
-    existing = await users_col.find_one({"username": payload.username})
-    if existing:
-        raise HTTPException(status_code=400, detail="Username already taken")
-
-    doc = {
-        "username": payload.username,
-        "name": payload.name,
-        "created_at": datetime.utcnow(),
-    }
-    res = await users_col.insert_one(doc)
-    doc["_id"] = str(res.inserted_id)
-    return User(**doc)
 
 
 @router.get("/", response_model=List[User])
@@ -46,39 +27,60 @@ async def list_users(db: AsyncIOMotorDatabase = Depends(get_db)):
     return items
 
 
-@router.get("/{username}", response_model=User)
-async def get_user(username: str, db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Login - get user by username"""
+@router.post("/", response_model=User)
+async def create_user(payload: UserCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Create a new user"""
     users_col = db["users"]
-    user = await users_col.find_one({"username": username})
+
+    # Check if name already taken
+    existing = await users_col.find_one({"name": payload.name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Name already taken")
+
+    doc = {
+        "name": payload.name,
+        "created_at": datetime.utcnow(),
+    }
+    res = await users_col.insert_one(doc)
+    doc["_id"] = str(res.inserted_id)
+    return User(**doc)
+
+
+@router.get("/login/{name}", response_model=User)
+async def login(name: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Login - get user by name"""
+    users_col = db["users"]
+    user = await users_col.find_one({"name": name})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user["_id"] = str(user["_id"])
     return User(**user)
 
 
-@router.get("/{username}/groups", response_model=List)
-async def get_user_groups(username: str, db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Get all groups a user belongs to"""
+@router.get("/{user_id}", response_model=User)
+async def get_user(user_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Get user by ID"""
     users_col = db["users"]
+    user = await users_col.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user["_id"] = str(user["_id"])
+    return User(**user)
+
+
+@router.get("/{user_id}/groups", response_model=List[Group])
+async def get_user_groups(user_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Get all groups a user belongs to"""
     members_col = db["group_members"]
     groups_col = db["groups"]
 
-    # Get user
-    user = await users_col.find_one({"username": username})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user_id = str(user["_id"])
-
-    # Get group memberships
     memberships = members_col.find({"user_id": user_id})
 
     groups = []
     async for m in memberships:
-        group = await groups_col.find_one({"_id": __import__("bson").ObjectId(m["group_id"])})
+        group = await groups_col.find_one({"_id": ObjectId(m["group_id"])})
         if group:
             group["_id"] = str(group["_id"])
-            groups.append(group)
+            groups.append(Group(**group))
 
     return groups

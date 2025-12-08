@@ -8,6 +8,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from bson import ObjectId
 
 from main import get_db
 from models import Round, Deed, MemberStatus
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/rounds", tags=["rounds"])
 async def get_round(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
     """Get round details"""
     rounds_col = db["rounds"]
-    rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
+    rnd = await rounds_col.find_one({"_id": ObjectId(round_id)})
     if not rnd:
         raise HTTPException(status_code=404, detail="Round not found")
     rnd["_id"] = str(rnd["_id"])
@@ -35,7 +36,7 @@ async def get_round_status(round_id: str, db: AsyncIOMotorDatabase = Depends(get
     deeds_col = db["deeds"]
 
     # Get round
-    rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
+    rnd = await rounds_col.find_one({"_id": ObjectId(round_id)})
     if not rnd:
         raise HTTPException(status_code=404, detail="Round not found")
 
@@ -49,12 +50,11 @@ async def get_round_status(round_id: str, db: AsyncIOMotorDatabase = Depends(get
     # Get all group members with their status
     results = []
     async for m in members_col.find({"group_id": group_id}):
-        user = await users_col.find_one({"_id": __import__("bson").ObjectId(m["user_id"])})
+        user = await users_col.find_one({"_id": ObjectId(m["user_id"])})
         if user:
             user_id = str(user["_id"])
             results.append(MemberStatus(
                 _id=user_id,
-                username=user["username"],
                 name=user["name"],
                 completed=user_id in completed_user_ids
             ))
@@ -63,23 +63,21 @@ async def get_round_status(round_id: str, db: AsyncIOMotorDatabase = Depends(get
 
 
 @router.post("/{round_id}/complete", response_model=Deed)
-async def complete_deed(round_id: str, username: str = Query(...), db: AsyncIOMotorDatabase = Depends(get_db)):
+async def complete_deed(round_id: str, user_id: str = Query(...), db: AsyncIOMotorDatabase = Depends(get_db)):
     """Mark a user's deed as complete for this round"""
     rounds_col = db["rounds"]
     users_col = db["users"]
     deeds_col = db["deeds"]
 
     # Check round exists
-    rnd = await rounds_col.find_one({"_id": __import__("bson").ObjectId(round_id)})
+    rnd = await rounds_col.find_one({"_id": ObjectId(round_id)})
     if not rnd:
         raise HTTPException(status_code=404, detail="Round not found")
 
-    # Get user
-    user = await users_col.find_one({"username": username})
+    # Check user exists
+    user = await users_col.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
-    user_id = str(user["_id"])
 
     # Check if already completed
     existing = await deeds_col.find_one({"round_id": round_id, "user_id": user_id})
