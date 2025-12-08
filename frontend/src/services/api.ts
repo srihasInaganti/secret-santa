@@ -40,6 +40,13 @@ export interface DeedTemplate {
   description: string;
 }
 
+export interface RoundCompletion {
+  round_id: string;
+  total_members: number;
+  completed_count: number;
+  all_complete: boolean;
+}
+
 // ============ Users ============
 
 export async function login(name: string): Promise<User> {
@@ -119,6 +126,20 @@ export async function getRoundStatus(roundId: string): Promise<MemberStatus[]> {
   return response.json();
 }
 
+export async function checkRoundComplete(roundId: string): Promise<RoundCompletion> {
+  const response = await fetch(`${API_BASE}/rounds/${roundId}/check-complete`);
+  if (!response.ok) throw new Error('Failed to check completion');
+  return response.json();
+}
+
+export async function advanceToNextRound(roundId: string): Promise<Round> {
+  const response = await fetch(`${API_BASE}/rounds/${roundId}/advance`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to advance round');
+  return response.json();
+}
+
 // ============ Deeds ============
 
 export async function getMyDeed(roundId: string, userId: string): Promise<DeedAssignment> {
@@ -146,6 +167,12 @@ export async function getAllDeeds(roundId: string): Promise<DeedAssignment[]> {
 export async function getDeedTemplates(): Promise<DeedTemplate[]> {
   const response = await fetch(`${API_BASE}/deeds/templates`);
   if (!response.ok) throw new Error('Failed to fetch templates');
+  return response.json();
+}
+
+export async function getRandomDeed(): Promise<DeedTemplate> {
+  const response = await fetch(`${API_BASE}/deeds/random`);
+  if (!response.ok) throw new Error('Failed to get random deed');
   return response.json();
 }
 

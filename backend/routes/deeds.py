@@ -3,6 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import random
 from datetime import datetime
 from typing import List
 
@@ -51,6 +52,23 @@ async def delete_deed_template(template_id: str, db: AsyncIOMotorDatabase = Depe
         raise HTTPException(status_code=404, detail="Template not found")
 
     return {"deleted": True}
+
+
+@router.get("/random", response_model=DeedTemplate)
+async def get_random_deed(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Get a random deed from the pool"""
+    templates_col = db["deed_templates"]
+
+    # Get all templates
+    templates = []
+    async for t in templates_col.find():
+        t["_id"] = str(t["_id"])
+        templates.append(DeedTemplate(**t))
+
+    if not templates:
+        raise HTTPException(status_code=404, detail="No deed templates found. Please seed the database first.")
+
+    return random.choice(templates)
 
 
 @router.post("/seed")

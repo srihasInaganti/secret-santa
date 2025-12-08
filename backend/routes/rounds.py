@@ -3,7 +3,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from datetime import datetime
+import random
+from datetime import datetime, timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -14,6 +15,47 @@ from main import get_db
 from models import Round, DeedAssignment, MemberStatus
 
 router = APIRouter(prefix="/rounds", tags=["rounds"])
+
+
+async def get_random_deed_description(db: AsyncIOMotorDatabase) -> str:
+    """Helper to get a random deed description"""
+    templates_col = db["deed_templates"]
+    templates = []
+    async for t in templates_col.find():
+        templates.append(t["description"])
+
+    if not templates:
+        # Fallback deeds
+        templates = [
+            "Do something kind for someone today",
+            "Compliment a coworker",
+            "Help someone without being asked",
+        ]
+
+    return random.choice(templates)
+
+
+async def assign_deeds_to_members(db: AsyncIOMotorDatabase, round_id: str, group_id: str):
+    """Assign random deeds to all group members"""
+    members_col = db["group_members"]
+    deeds_col = db["deeds"]
+
+    # Get all group members
+    members = []
+    async for m in members_col.find({"group_id": group_id}):
+        members.append(m["user_id"])
+
+    # Assign random deed to each member
+    for user_id in members:
+        deed_description = await get_random_deed_description(db)
+        await deeds_col.insert_one({
+            "round_id": round_id,
+            "user_id": user_id,
+            "deed_description": deed_description,
+            "completed": False,
+            "completed_at": None,
+            "created_at": datetime.utcnow(),
+        })
 
 
 @router.get("/{round_id}", response_model=Round)
@@ -61,6 +103,75 @@ async def get_round_status(round_id: str, db: AsyncIOMotorDatabase = Depends(get
             ))
 
     return results
+
+
+@router.get("/{round_id}/check-complete")
+async def check_round_complete(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Check if all members have completed their deeds"""
+    rounds_col = db["rounds"]
+    members_col = db["group_members"]
+    deeds_col = db["deeds"]
+
+    rnd = await rounds_col.find_one({"_id": ObjectId(round_id)})
+    if not rnd:
+        raise HTTPException(status_code=404, detail="Round not found")
+
+    group_id = rnd["group_id"]
+
+    # Count members
+    member_count = await members_col.count_documents({"group_id": group_id})
+
+    # Count completed deeds
+    completed_count = await deeds_col.count_documents({"round_id": round_id, "completed": True})
+
+    all_complete = member_count > 0 and member_count == completed_count
+
+    return {
+        "round_id": round_id,
+        "total_members": member_count,
+        "completed_count": completed_count,
+        "all_complete": all_complete
+    }
+
+
+@router.post("/{round_id}/advance", response_model=Round)
+async def advance_to_next_round(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Complete current round and start a new one with new deed assignments"""
+    rounds_col = db["rounds"]
+
+    # Get current round
+    current_round = await rounds_col.find_one({"_id": ObjectId(round_id)})
+    if not current_round:
+        raise HTTPException(status_code=404, detail="Round not found")
+
+    group_id = current_round["group_id"]
+
+    # Mark current round as completed
+    await rounds_col.update_one(
+        {"_id": ObjectId(round_id)},
+        {"$set": {"status": "completed"}}
+    )
+
+    # Create new round name (next week)
+    today = datetime.utcnow()
+    next_week = today + timedelta(days=7)
+    round_name = "Week of " + next_week.strftime("%b %d")
+
+    # Create new round
+    new_round_doc = {
+        "group_id": group_id,
+        "name": round_name,
+        "status": "active",
+        "created_at": datetime.utcnow(),
+    }
+    res = await rounds_col.insert_one(new_round_doc)
+    new_round_id = str(res.inserted_id)
+    new_round_doc["_id"] = new_round_id
+
+    # Assign new deeds to all members
+    await assign_deeds_to_members(db, new_round_id, group_id)
+
+    return Round(**new_round_doc)
 
 
 @router.get("/{round_id}/my-deed", response_model=DeedAssignment)

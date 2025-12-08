@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './NavBar.css';
 
 function NavBar(props: { activeTab: string; onTabChange: Function }) {
+  var navigate = useNavigate();
 
   function getUser() {
     var storedUser = localStorage.getItem('user');
@@ -13,6 +15,10 @@ function NavBar(props: { activeTab: string; onTabChange: Function }) {
 
   var user = getUser();
   var isLoggedIn = user !== null;
+
+  function handleProfileClick() {
+    props.onTabChange('profile');
+  }
 
   return (
     <nav className="nav-bar">
@@ -30,12 +36,6 @@ function NavBar(props: { activeTab: string; onTabChange: Function }) {
               onClick={function() { props.onTabChange('deed'); }}
             >
               Your Good Deed
-            </button>
-            <button
-              className={props.activeTab === 'profile' ? 'nav-btn active' : 'nav-btn'}
-              onClick={function() { props.onTabChange('profile'); }}
-            >
-              Profile
             </button>
           </>
         ) : (
@@ -58,10 +58,13 @@ function NavBar(props: { activeTab: string; onTabChange: Function }) {
 
       {isLoggedIn && user && (
         <div className="nav-right">
-          <div className="user-badge">
+          <button
+            className={props.activeTab === 'profile' ? 'user-badge active' : 'user-badge'}
+            onClick={handleProfileClick}
+          >
             <span className="user-icon">👤</span>
             <span className="user-name">{user.name}</span>
-          </div>
+          </button>
         </div>
       )}
     </nav>

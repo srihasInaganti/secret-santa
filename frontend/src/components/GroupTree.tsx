@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { getRound, getRoundStatus, MemberStatus, Round } from '../services/api';
+import { getRound, getRoundStatus, checkRoundComplete, advanceToNextRound, MemberStatus, Round } from '../services/api';
 import Ornament from './Ornament';
+import Celebration from './Celebration';
 import './GroupTree.css';
 
 const ORNAMENT_COLORS = [
@@ -32,28 +33,54 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
   var [round, setRound] = useState<Round | null>(null);
   var [loading, setLoading] = useState(true);
   var [error, setError] = useState<string | null>(null);
+  var [showCelebration, setShowCelebration] = useState(false);
+  var [currentRoundId, setCurrentRoundId] = useState(props.roundId);
 
   useEffect(function() {
-    async function loadData() {
-      try {
-        setLoading(true);
-        setError(null);
-        var roundData = await getRound(props.roundId);
-        var statusData = await getRoundStatus(props.roundId);
-        setRound(roundData);
-        setMembers(statusData);
-      } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('Failed to load data');
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
     loadData();
-  }, [props.roundId]);
+  }, [currentRoundId]);
+
+  async function loadData() {
+    try {
+      setLoading(true);
+      setError(null);
+      var roundData = await getRound(currentRoundId);
+      var statusData = await getRoundStatus(currentRoundId);
+      setRound(roundData);
+      setMembers(statusData);
+
+      // Check if all complete
+      var completion = await checkRoundComplete(currentRoundId);
+      if (completion.all_complete && completion.total_members > 0) {
+        setShowCelebration(true);
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to load data');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCelebrationComplete() {
+    try {
+      // Advance to next round
+      var newRound = await advanceToNextRound(currentRoundId);
+
+      // Update localStorage
+      localStorage.setItem('round', JSON.stringify(newRound));
+
+      // Update state
+      setCurrentRoundId(newRound._id);
+      setShowCelebration(false);
+    } catch (err) {
+      console.error('Failed to advance round:', err);
+      setShowCelebration(false);
+    }
+  }
 
   function getUserColor(index: number) {
     return ORNAMENT_COLORS[index % ORNAMENT_COLORS.length];
@@ -95,9 +122,17 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
 
   return (
     <div className="group-tree-container">
+      {showCelebration && (
+        <Celebration onComplete={handleCelebrationComplete} />
+      )}
+
       <div className="tree-content">
         <section className="members-panel">
           <h2 className="group-name">[{groupName}]</h2>
+
+          {round && (
+            <p className="round-name">📅 {round.name}</p>
+          )}
 
           <p className="round-status started">
             🎁 {completedMembers.length}/{members.length} deeds complete
@@ -120,7 +155,9 @@ function GroupTree(props: { roundId: string; groupName?: string }) {
             <p className="no-members">No members yet!</p>
           )}
 
-          <button className="deed-btn">See your good deed!</button>
+          <button className="deed-btn" onClick={function() { window.location.href = '/deed'; }}>
+            See your good deed!
+          </button>
         </section>
 
         <section className="tree-panel">

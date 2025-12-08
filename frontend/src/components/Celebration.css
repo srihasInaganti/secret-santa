@@ -1,0 +1,123 @@
+.celebration-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.celebration-content {
+  text-align: center;
+  color: white;
+  z-index: 10;
+}
+
+.celebration-emoji {
+  font-size: 100px;
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-30px); }
+}
+
+.celebration-title {
+  font-family: 'Mountains of Christmas', cursive;
+  font-size: 64px;
+  margin: 20px 0;
+  color: #FFD700;
+  text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+}
+
+.celebration-message {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 24px;
+  color: #34D399;
+  margin-bottom: 30px;
+}
+
+.celebration-stars {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  font-size: 40px;
+  margin: 30px 0;
+}
+
+.celebration-stars span {
+  animation: twinkle 1.5s ease infinite;
+}
+
+.celebration-stars span:nth-child(1) { animation-delay: 0s; }
+.celebration-stars span:nth-child(2) { animation-delay: 0.3s; }
+.celebration-stars span:nth-child(3) { animation-delay: 0.6s; }
+.celebration-stars span:nth-child(4) { animation-delay: 0.9s; }
+.celebration-stars span:nth-child(5) { animation-delay: 1.2s; }
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.7; }
+}
+
+.celebration-next {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 18px;
+  color: #D4D4D4;
+  margin-top: 40px;
+}
+
+.celebration-tree {
+  font-size: 80px;
+  margin-top: 20px;
+  animation: sway 2s ease-in-out infinite;
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+/* Confetti */
+.confetti {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 20px;
+  border-radius: 2px;
+  animation: fall 4s linear infinite;
+}
+
+@keyframes fall {
+  0% {
+    top: -20px;
+    transform: rotate(0deg) translateX(0);
+    opacity: 1;
+  }
+  100% {
+    top: 100vh;
+    transform: rotate(720deg) translateX(100px);
+    opacity: 0;
+  }
+}
