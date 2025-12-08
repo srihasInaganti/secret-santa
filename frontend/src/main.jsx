@@ -7,7 +7,8 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import CreateGroupPage from './pages/CreateGroupPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import YourDeedPage from './pages/YourDeedPage.jsx';
-import NavBar from './components/NavBar.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
+import NavBar from './components/NavBar';
 import './components/NavBar.css';
 
 function AppContent() {
@@ -17,25 +18,33 @@ function AppContent() {
   function getActiveTab() {
     if (location.pathname === '/dashboard') return 'group';
     if (location.pathname === '/deed') return 'deed';
+    if (location.pathname === '/profile') return 'profile';
+    if (location.pathname === '/login') return 'join';
+    if (location.pathname === '/create') return 'create';
     return '';
   }
 
   function handleTabChange(tab) {
     if (tab === 'group') navigate('/dashboard');
     if (tab === 'deed') navigate('/deed');
-    if (tab === 'profile') navigate('/dashboard');
-    if (tab === 'join') navigate('/dashboard');
+    if (tab === 'profile') navigate('/profile');
+    if (tab === 'join') navigate('/login');
+    if (tab === 'create') navigate('/create');
   }
+
+  // Hide NavBar only on home page
+  var showNavBar = location.pathname !== '/';
 
   return (
     <>
-      <NavBar activeTab={getActiveTab()} onTabChange={handleTabChange} />
+      {showNavBar && <NavBar activeTab={getActiveTab()} onTabChange={handleTabChange} />}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/create" element={<CreateGroupPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/deed" element={<YourDeedPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </>
   );

@@ -1,8 +1,21 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {SnowForeground, SnowBackground} from "../components/Snow.jsx";
 
 export default function HomePage() {
   var navigate = useNavigate();
+
+  // Check if already logged in
+  useEffect(function() {
+    var storedUser = localStorage.getItem('user');
+    var storedGroup = localStorage.getItem('group');
+    var storedRound = localStorage.getItem('round');
+
+    if (storedUser && storedGroup && storedRound) {
+      // Already logged in, go to dashboard
+      navigate('/dashboard');
+    }
+  }, [navigate]);
 
   function goToCreateGroup() {
     navigate('/create');

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, getUserGroups, getCurrentRound } from '../services/api';
 import {SnowForeground, SnowBackground} from "../components/Snow.jsx";
@@ -8,6 +8,18 @@ export default function LoginPage() {
   var [error, setError] = useState('');
   var [loading, setLoading] = useState(false);
   var navigate = useNavigate();
+
+  // Check if already logged in
+  useEffect(function() {
+    var storedUser = localStorage.getItem('user');
+    var storedGroup = localStorage.getItem('group');
+    var storedRound = localStorage.getItem('round');
+
+    if (storedUser && storedGroup && storedRound) {
+      // Already logged in, go to dashboard
+      navigate('/dashboard');
+    }
+  }, [navigate]);
 
   async function handleLogin() {
     if (!name.trim()) {
