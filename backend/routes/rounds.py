@@ -11,7 +11,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 
 from main import get_db
-from models import Round, Deed, MemberStatus
+from models import Round, DeedAssignment, MemberStatus
 
 router = APIRouter(prefix="/rounds", tags=["rounds"])
 
@@ -35,17 +35,16 @@ async def get_round_status(round_id: str, db: AsyncIOMotorDatabase = Depends(get
     users_col = db["users"]
     deeds_col = db["deeds"]
 
-    # Get round
     rnd = await rounds_col.find_one({"_id": ObjectId(round_id)})
     if not rnd:
         raise HTTPException(status_code=404, detail="Round not found")
 
     group_id = rnd["group_id"]
 
-    # Get all completed deeds for this round
-    completed_user_ids = set()
+    # Get all deeds for this round
+    deeds_map = {}
     async for deed in deeds_col.find({"round_id": round_id}):
-        completed_user_ids.add(deed["user_id"])
+        deeds_map[deed["user_id"]] = deed
 
     # Get all group members with their status
     results = []
@@ -53,54 +52,58 @@ async def get_round_status(round_id: str, db: AsyncIOMotorDatabase = Depends(get
         user = await users_col.find_one({"_id": ObjectId(m["user_id"])})
         if user:
             user_id = str(user["_id"])
+            deed = deeds_map.get(user_id, {})
             results.append(MemberStatus(
                 _id=user_id,
                 name=user["name"],
-                completed=user_id in completed_user_ids
+                completed=deed.get("completed", False),
+                deed_description=deed.get("deed_description")
             ))
 
     return results
 
 
-@router.post("/{round_id}/complete", response_model=Deed)
-async def complete_deed(round_id: str, user_id: str = Query(...), db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Mark a user's deed as complete for this round"""
-    rounds_col = db["rounds"]
-    users_col = db["users"]
+@router.get("/{round_id}/my-deed", response_model=DeedAssignment)
+async def get_my_deed(round_id: str, user_id: str = Query(...), db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Get the deed assigned to a specific user for this round"""
     deeds_col = db["deeds"]
 
-    # Check round exists
-    rnd = await rounds_col.find_one({"_id": ObjectId(round_id)})
-    if not rnd:
-        raise HTTPException(status_code=404, detail="Round not found")
+    deed = await deeds_col.find_one({"round_id": round_id, "user_id": user_id})
+    if not deed:
+        raise HTTPException(status_code=404, detail="No deed assigned yet")
 
-    # Check user exists
-    user = await users_col.find_one({"_id": ObjectId(user_id)})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    deed["_id"] = str(deed["_id"])
+    return DeedAssignment(**deed)
 
-    # Check if already completed
-    existing = await deeds_col.find_one({"round_id": round_id, "user_id": user_id})
-    if existing:
+
+@router.post("/{round_id}/complete", response_model=DeedAssignment)
+async def complete_deed(round_id: str, user_id: str = Query(...), db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Mark a user's deed as complete for this round"""
+    deeds_col = db["deeds"]
+
+    deed = await deeds_col.find_one({"round_id": round_id, "user_id": user_id})
+    if not deed:
+        raise HTTPException(status_code=404, detail="No deed assigned to this user")
+
+    if deed.get("completed"):
         raise HTTPException(status_code=400, detail="Deed already completed")
 
-    # Create deed
-    doc = {
-        "round_id": round_id,
-        "user_id": user_id,
-        "completed_at": datetime.utcnow(),
-    }
-    res = await deeds_col.insert_one(doc)
-    doc["_id"] = str(res.inserted_id)
-    return Deed(**doc)
+    await deeds_col.update_one(
+        {"_id": deed["_id"]},
+        {"$set": {"completed": True, "completed_at": datetime.utcnow()}}
+    )
+
+    deed = await deeds_col.find_one({"_id": deed["_id"]})
+    deed["_id"] = str(deed["_id"])
+    return DeedAssignment(**deed)
 
 
-@router.get("/{round_id}/deeds", response_model=List[Deed])
-async def get_deeds(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Get all completed deeds for this round"""
+@router.get("/{round_id}/deeds", response_model=List[DeedAssignment])
+async def get_all_deeds(round_id: str, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Get all deed assignments for this round"""
     deeds_col = db["deeds"]
     items = []
     async for d in deeds_col.find({"round_id": round_id}):
         d["_id"] = str(d["_id"])
-        items.append(Deed(**d))
+        items.append(DeedAssignment(**d))
     return items

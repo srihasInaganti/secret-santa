@@ -50,12 +50,29 @@ class Round(BaseModel):
         populate_by_name = True
 
 
-# ============ DEEDS ============
+# ============ DEED TEMPLATES ============
 
-class Deed(BaseModel):
+class DeedTemplateCreate(BaseModel):
+    description: str  # e.g., "Compliment someone 3 times"
+
+
+class DeedTemplate(BaseModel):
+    id: str = Field(alias="_id")
+    description: str
+    created_at: Optional[datetime] = None
+
+    class Config:
+        populate_by_name = True
+
+
+# ============ DEED ASSIGNMENTS ============
+
+class DeedAssignment(BaseModel):
     id: str = Field(alias="_id")
     round_id: str
     user_id: str
+    deed_description: str
+    completed: bool = False
     completed_at: Optional[datetime] = None
 
     class Config:
@@ -68,6 +85,7 @@ class MemberStatus(BaseModel):
     id: str = Field(alias="_id")
     name: str
     completed: bool
+    deed_description: Optional[str] = None
 
     class Config:
         populate_by_name = True

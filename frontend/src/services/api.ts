@@ -23,6 +23,21 @@ export interface MemberStatus {
   _id: string;
   name: string;
   completed: boolean;
+  deed_description?: string;
+}
+
+export interface DeedAssignment {
+  _id: string;
+  round_id: string;
+  user_id: string;
+  deed_description: string;
+  completed: boolean;
+  completed_at?: string;
+}
+
+export interface DeedTemplate {
+  _id: string;
+  description: string;
 }
 
 // ============ Users ============
@@ -57,9 +72,36 @@ export async function getGroup(groupId: string): Promise<Group> {
   return response.json();
 }
 
+export async function createGroup(name: string): Promise<Group> {
+  const response = await fetch(`${API_BASE}/groups/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error('Failed to create group');
+  return response.json();
+}
+
+export async function joinGroup(groupId: string, userId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/groups/${groupId}/join?user_id=${userId}`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to join group');
+}
+
 export async function getCurrentRound(groupId: string): Promise<Round> {
   const response = await fetch(`${API_BASE}/groups/${groupId}/current-round`);
   if (!response.ok) throw new Error('No active round');
+  return response.json();
+}
+
+export async function createRound(groupId: string, name: string): Promise<Round> {
+  const response = await fetch(`${API_BASE}/groups/${groupId}/rounds`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error('Failed to create round');
   return response.json();
 }
 
@@ -77,9 +119,49 @@ export async function getRoundStatus(roundId: string): Promise<MemberStatus[]> {
   return response.json();
 }
 
-export async function completeDeed(roundId: string, userId: string): Promise<void> {
+// ============ Deeds ============
+
+export async function getMyDeed(roundId: string, userId: string): Promise<DeedAssignment> {
+  const response = await fetch(`${API_BASE}/rounds/${roundId}/my-deed?user_id=${userId}`);
+  if (!response.ok) throw new Error('No deed assigned');
+  return response.json();
+}
+
+export async function completeDeed(roundId: string, userId: string): Promise<DeedAssignment> {
   const response = await fetch(`${API_BASE}/rounds/${roundId}/complete?user_id=${userId}`, {
     method: 'POST',
   });
   if (!response.ok) throw new Error('Failed to complete deed');
+  return response.json();
+}
+
+export async function getAllDeeds(roundId: string): Promise<DeedAssignment[]> {
+  const response = await fetch(`${API_BASE}/rounds/${roundId}/deeds`);
+  if (!response.ok) throw new Error('Failed to fetch deeds');
+  return response.json();
+}
+
+// ============ Deed Templates ============
+
+export async function getDeedTemplates(): Promise<DeedTemplate[]> {
+  const response = await fetch(`${API_BASE}/deeds/templates`);
+  if (!response.ok) throw new Error('Failed to fetch templates');
+  return response.json();
+}
+
+export async function createDeedTemplate(description: string): Promise<DeedTemplate> {
+  const response = await fetch(`${API_BASE}/deeds/templates`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description }),
+  });
+  if (!response.ok) throw new Error('Failed to create template');
+  return response.json();
+}
+
+export async function seedDeedTemplates(): Promise<void> {
+  const response = await fetch(`${API_BASE}/deeds/seed`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error('Failed to seed templates');
 }

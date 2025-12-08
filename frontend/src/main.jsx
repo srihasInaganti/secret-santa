@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import CreateGroupPage from './pages/CreateGroupPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import YourDeedPage from './pages/YourDeedPage.jsx';
 import NavBar from './components/NavBar.jsx';
 import './components/NavBar.css';
 
@@ -15,14 +16,15 @@ function AppContent() {
 
   function getActiveTab() {
     if (location.pathname === '/dashboard') return 'group';
+    if (location.pathname === '/deed') return 'deed';
     return '';
   }
 
   function handleTabChange(tab) {
     if (tab === 'group') navigate('/dashboard');
-    if (tab === 'deed') navigate('/dashboard');
+    if (tab === 'deed') navigate('/deed');
     if (tab === 'profile') navigate('/dashboard');
-    if (tab === 'join') navigate('/');
+    if (tab === 'join') navigate('/dashboard');
   }
 
   return (
@@ -33,6 +35,7 @@ function AppContent() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/create" element={<CreateGroupPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/deed" element={<YourDeedPage />} />
       </Routes>
     </>
   );

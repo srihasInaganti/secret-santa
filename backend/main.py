@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 import os
 from pathlib import Path
 from typing import AsyncGenerator
-
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -66,8 +65,9 @@ async def health():
 
 
 # Import and register routers
-from routes import users, groups, rounds
+from routes import users, groups, rounds, deeds
 
 app.include_router(users.router)
 app.include_router(groups.router)
 app.include_router(rounds.router)
+app.include_router(deeds.router)

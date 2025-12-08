@@ -3,6 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import random
 from datetime import datetime
 from typing import List
 
@@ -59,17 +60,14 @@ async def join_group(group_id: str, user_id: str = Query(...), db: AsyncIOMotorD
     users_col = db["users"]
     members_col = db["group_members"]
 
-    # Check group exists
     group = await groups_col.find_one({"_id": ObjectId(group_id)})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    # Check user exists
     user = await users_col.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Add to group (upsert)
     await members_col.update_one(
         {"group_id": group_id, "user_id": user_id},
         {"$setOnInsert": {"group_id": group_id, "user_id": user_id, "joined_at": datetime.utcnow()}},
@@ -108,9 +106,12 @@ async def list_rounds(group_id: str, db: AsyncIOMotorDatabase = Depends(get_db))
 
 @router.post("/{group_id}/rounds", response_model=Round)
 async def create_round(group_id: str, payload: RoundCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Start a new weekly round"""
+    """Start a new weekly round and assign random deeds to all members"""
     groups_col = db["groups"]
     rounds_col = db["rounds"]
+    members_col = db["group_members"]
+    templates_col = db["deed_templates"]
+    deeds_col = db["deeds"]
 
     # Check group exists
     group = await groups_col.find_one({"_id": ObjectId(group_id)})
@@ -124,15 +125,47 @@ async def create_round(group_id: str, payload: RoundCreate, db: AsyncIOMotorData
     )
 
     # Create new round
-    doc = {
+    round_doc = {
         "group_id": group_id,
         "name": payload.name,
         "status": "active",
         "created_at": datetime.utcnow(),
     }
-    res = await rounds_col.insert_one(doc)
-    doc["_id"] = str(res.inserted_id)
-    return Round(**doc)
+    res = await rounds_col.insert_one(round_doc)
+    round_id = str(res.inserted_id)
+    round_doc["_id"] = round_id
+
+    # Get all deed templates
+    templates = []
+    async for t in templates_col.find():
+        templates.append(t["description"])
+
+    # Fallback if no templates exist
+    if not templates:
+        templates = [
+            "Do something kind for someone today",
+            "Compliment a coworker",
+            "Help someone without being asked",
+        ]
+
+    # Get all group members
+    members = []
+    async for m in members_col.find({"group_id": group_id}):
+        members.append(m["user_id"])
+
+    # Assign random deed to each member
+    for user_id in members:
+        deed_description = random.choice(templates)
+        await deeds_col.insert_one({
+            "round_id": round_id,
+            "user_id": user_id,
+            "deed_description": deed_description,
+            "completed": False,
+            "completed_at": None,
+            "created_at": datetime.utcnow(),
+        })
+
+    return Round(**round_doc)
 
 
 @router.get("/{group_id}/current-round", response_model=Round)
