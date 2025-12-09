@@ -11,6 +11,7 @@ import ProfilePage from './pages/ProfilePage.jsx';
 import NavBar from './components/NavBar';
 import { SnowBackground, SnowForeground } from './components/Snow.jsx';
 import './components/NavBar.css';
+import BackgroundMusic from './components/backgroundMusic';
 
 function AppContent() {
   var navigate = useNavigate();
@@ -58,6 +59,7 @@ function AppContent() {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
+    <BackgroundMusic></BackgroundMusic>
       <AppContent />
     </BrowserRouter>
   </StrictMode>,
