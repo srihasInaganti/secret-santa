@@ -143,8 +143,12 @@ export default function ProfilePage() {
             margin: '0 0 10px 0',
             textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
           }}>
+              <img src= "heartCandyPic.png" alt="Candy Cane Heart" style={{ width: '32px', height: '32px', padding: '4px' }} />
             {user ? user.name : 'Guest'}
+            <img src= "heartCandyPic.png" alt="Candy Cane Heart" style={{ width: '32px', height: '32px', padding: '4px' }} />
+
           </h1>
+          
 
           <p style={{
             color: '#D4D4D4',
@@ -153,6 +157,7 @@ export default function ProfilePage() {
             Member of {groups.length} group{groups.length !== 1 ? 's' : ''}
           </p>
         </div>
+        
 
         {/* Groups Section */}
         <div style={{
