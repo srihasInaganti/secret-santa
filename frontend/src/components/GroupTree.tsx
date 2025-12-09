@@ -6,10 +6,28 @@ import Celebration from './Celebration';
 import './GroupTree.css';
 
 const ORNAMENT_COLORS = [
-  '#DC2626', '#FFD700', '#16A34A', '#2563EB',
-  '#DC2626', '#9333EA', '#FFD700', '#EC4899',
-  '#F97316', '#14B8A6',
+  "#FF0000",
+  "#008000",
+  "#FFD700",
+  "#FFFFFF",
+  "#00FF00",
+  "#8B0000",
+  "#FF4500",
+  "#FF69B4",
+  "#ADD8E6",
+  "#1E90FF",
+  "#00CED1",
+  "#87CEEB",
+  "#C0C0C0",
+  "#DAA520",
+  "#32CD32",
+  "#FA8072",
+  "#DC143C",
+  "#F0E68C",
+  "#B22222",
+  "#2E8B57",
 ];
+
 
 const ORNAMENT_POSITIONS = [
   { top: '18%', left: '50%' },

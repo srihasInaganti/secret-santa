@@ -56,10 +56,8 @@ export default function LoginPage() {
         var round = await getCurrentRound(group._id);
         localStorage.setItem('group', JSON.stringify(group));
         localStorage.setItem('round', JSON.stringify(round));
-        navigate('/dashboard');
-      } catch (err) {
-        // Group exists but no active round - go to profile
-        navigate('/profile');
+      } finally {
+          navigate('/profile');
       }
 
     } catch (err) {
