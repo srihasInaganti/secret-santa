@@ -26,13 +26,23 @@ export interface MemberStatus {
   deed_description?: string;
 }
 
+// services/api.ts (Replace the existing DeedAssignment interface with this)
+
 export interface DeedAssignment {
   _id: string;
   round_id: string;
   user_id: string;
+  receiver_id: string; // <-- NEW
   deed_description: string;
   completed: boolean;
   completed_at?: string;
+
+  // NEW verification fields
+  verification_status?: 'active' | 'pending' | 'approved' | 'rejected'; // <-- NEW
+  proof?: string; // <-- NEW
+  submitted_at?: string;
+  verified_by?: string;
+  verified_at?: string;
 }
 
 export interface DeedTemplate {
@@ -148,16 +158,47 @@ export async function getMyDeed(roundId: string, userId: string): Promise<DeedAs
   return response.json();
 }
 
-export async function completeDeed(roundId: string, userId: string): Promise<DeedAssignment> {
-  const response = await fetch(`${API_BASE}/rounds/${roundId}/complete?user_id=${userId}`, {
+
+// NOTE: We are changing the old 'complete' endpoint function to be a 'submit' function.
+export async function submitDeedForVerification(
+  roundId: string,
+  userId: string,
+  proof: string = '' // We'll add proof submission later. For now, we only need user_id.
+): Promise<DeedAssignment> {
+  // We assume the backend route will be updated to handle this as a submission
+  const response = await fetch(`${API_BASE}/rounds/${roundId}/submit?user_id=${userId}`, { // <-- CHANGED URL
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ proof }),
   });
-  if (!response.ok) throw new Error('Failed to complete deed');
+  if (!response.ok) throw new Error('Failed to submit deed for verification');
   return response.json();
 }
 
-export async function getAllDeeds(roundId: string): Promise<DeedAssignment[]> {
-  const response = await fetch(`${API_BASE}/rounds/${roundId}/deeds`);
+// NEW: Function for the recipient to approve or reject the deed.
+export async function verifyDeed(
+  deedId: string, 
+  verifierId: string, 
+  action: 'approve' | 'reject'
+): Promise<DeedAssignment> {
+  const response = await fetch(`${API_BASE}/deeds/${deedId}/verify?verifier_id=${verifierId}&action=${action}`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw new Error(`Failed to ${action} deed`);
+  return response.json();
+}
+
+
+
+// services/api.ts (Replace the existing getAllDeeds function with this)
+export async function getAllDeeds(roundId: string, receiverId?: string): Promise<DeedAssignment[]> {
+  let url = `${API_BASE}/rounds/${roundId}/deeds`;
+  
+  if (receiverId) {
+    url += `?receiver_id=${receiverId}&status=pending`; // Add filter parameters
+  }
+  
+  const response = await fetch(url);
   if (!response.ok) throw new Error('Failed to fetch deeds');
   return response.json();
 }

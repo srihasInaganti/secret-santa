@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyDeed, completeDeed, getGroup, getRound } from '../services/api';
+// NOTE: Using submitDeedForVerification instead of completeDeed
+import { getMyDeed, submitDeedForVerification, getGroup, getRound } from '../services/api'; 
 import { SnowForeground, SnowBackground } from "../components/Snow.jsx";
 
 export default function YourDeedPage() {
@@ -52,15 +53,20 @@ export default function YourDeedPage() {
     }
 
     setCompleting(true);
+    
+    // NOTE: This is now SUBMISSION. 
+    // In a real application, you might show a modal here to collect the proof text.
+    const proofNote = "I completed the good deed and am submitting it for verification!";
 
     try {
-      var updatedDeed = await completeDeed(round._id, user._id);
+      // Call the new submission function
+      var updatedDeed = await submitDeedForVerification(round._id, user._id, proofNote);
       setDeed(updatedDeed);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Failed to complete deed');
+        setError('Failed to submit deed for verification');
       }
     } finally {
       setCompleting(false);
@@ -85,6 +91,50 @@ export default function YourDeedPage() {
       </>
     );
   }
+  
+  // --- NEW STATUS LOGIC ---
+  let statusText = '';
+  let statusColor = '';
+  let badgeLabel = '';
+  let showButton = false;
+  let buttonText = 'Send for Verification';
+  let completionDetail = null;
+
+  if (deed) {
+      if (deed.completed) {
+        // 🟢 COMPLETED: Verified and final
+        badgeLabel = '✅ Completed!';
+        statusColor = '#34D399'; // Green
+        statusText = 'Your Good Deed has been verified!';
+        completionDetail = `🎉 Verified on ${new Date(deed.completed_at).toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        })}`;
+      } else if (deed.verification_status === 'pending') {
+        // 🟡 PENDING: Submitted and waiting for recipient/verifier
+        badgeLabel = '⏳ Awaiting Verification';
+        statusColor = '#FFD700'; // Gold/Yellow
+        statusText = 'Deed submitted! The recipient must verify it to be marked complete.';
+      } else if (deed.verification_status === 'rejected') {
+        // 🔴 REJECTED: Failed verification
+        badgeLabel = '❌ Verification Rejected';
+        statusColor = '#EF4444'; // Red
+        statusText = 'Your submission was rejected. Please review the deed and try again!';
+        showButton = true;
+        buttonText = 'Resubmit for Verification';
+      } else { 
+        // 🔵 ACTIVE: Ready to be performed and submitted (default state)
+        badgeLabel = '✍️ In Progress';
+        statusColor = '#3B82F6'; // Blue
+        statusText = 'Complete your good deed, then submit it for verification.';
+        showButton = true;
+        buttonText = 'Submit for Verification';
+      }
+  }
+  // --- END NEW STATUS LOGIC ---
+
 
   return (
     <>
@@ -183,50 +233,29 @@ export default function YourDeedPage() {
             maxWidth: '550px',
             width: '100%',
             textAlign: 'center',
-            border: deed.completed ? '4px solid #34D399' : '4px solid #FFD700',
-            boxShadow: deed.completed
-              ? '0 0 30px rgba(52, 211, 153, 0.3)'
-              : '0 0 30px rgba(255, 215, 0, 0.3)',
+            // Use dynamic statusColor for the border/shadow
+            border: `4px solid ${statusColor}`,
+            boxShadow: `0 0 30px ${statusColor}4D`,
             position: 'relative'
           }}>
 
-            {/* Completed Badge */}
-            {deed.completed && (
-              <div style={{
-                position: 'absolute',
-                top: '-15px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: '#34D399',
-                color: 'white',
-                padding: '10px 25px',
-                borderRadius: '30px',
-                fontWeight: '700',
-                fontSize: '16px',
-                boxShadow: '0 4px 15px rgba(52, 211, 153, 0.4)'
-              }}>
-                ✅ Completed!
-              </div>
-            )}
-
-            {/* Pending Badge */}
-            {!deed.completed && (
-              <div style={{
-                position: 'absolute',
-                top: '-15px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                background: '#FFD700',
-                color: '#1a1a1a',
-                padding: '10px 25px',
-                borderRadius: '30px',
-                fontWeight: '700',
-                fontSize: '16px',
-                boxShadow: '0 4px 15px rgba(255, 215, 0, 0.4)'
-              }}>
-                ⏳ In Progress
-              </div>
-            )}
+            {/* Status Badge */}
+            <div style={{
+              position: 'absolute',
+              top: '-15px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: statusColor,
+              // Change text color for light backgrounds
+              color: (statusColor === '#FFD700' || statusColor === '#EF4444') ? '#1a1a1a' : 'white',
+              padding: '10px 25px',
+              borderRadius: '30px',
+              fontWeight: '700',
+              fontSize: '16px',
+              boxShadow: `0 4px 15px ${statusColor}66`
+            }}>
+              {badgeLabel}
+            </div>
 
             {/* Task Label */}
             <p style={{
@@ -252,10 +281,11 @@ export default function YourDeedPage() {
               "{deed.deed_description}"
             </p>
 
-            {/* Complete Button */}
-            {!deed.completed && (
+            {/* Dynamic Button/Status Area */}
+            
+            {showButton && (
               <button
-                onClick={handleComplete}
+                onClick={handleComplete} 
                 disabled={completing}
                 style={{
                   marginTop: '30px',
@@ -273,24 +303,30 @@ export default function YourDeedPage() {
                   boxShadow: '0 6px 20px rgba(52, 211, 153, 0.4)'
                 }}
               >
-                {completing ? '⏳ Completing...' : '✓ Mark as Complete'}
+                {completing ? '⏳ Submitting...' : buttonText}
               </button>
             )}
 
-            {/* Completion Date */}
-            {deed.completed && deed.completed_at && (
-              <p style={{
+            {/* Show the status message for all states */}
+            <p style={{
                 marginTop: '25px',
-                fontSize: '14px',
-                color: '#34D399'
-              }}>
-                🎉 Completed on {new Date(deed.completed_at).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
-              </p>
+                fontSize: '16px',
+                fontWeight: completionDetail ? '700' : '600',
+                color: completionDetail ? statusColor : '#D4D4D4',
+                fontFamily: "'Quicksand', sans-serif"
+            }}>
+                {statusText}
+            </p>
+
+            {/* Completion Date/Detail */}
+            {completionDetail && (
+                <p style={{
+                    marginTop: '10px',
+                    fontSize: '14px',
+                    color: statusColor
+                }}>
+                    {completionDetail}
+                </p>
             )}
           </div>
         )}

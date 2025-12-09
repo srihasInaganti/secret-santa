@@ -8,6 +8,7 @@ import CreateGroupPage from './pages/CreateGroupPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import YourDeedPage from './pages/YourDeedPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
+import VerificationBox from './pages/VerificationBox.jsx'; // <-- 1. NEW IMPORT
 import NavBar from './components/NavBar';
 import './components/NavBar.css';
 
@@ -44,6 +45,7 @@ function AppContent() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/deed" element={<YourDeedPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/verify-inbox" element={<VerificationBox />} /> {/* <-- 2. NEW ROUTE */}
       </Routes>
     </>
   );
